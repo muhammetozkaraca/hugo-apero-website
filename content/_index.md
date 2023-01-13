@@ -2,8 +2,7 @@
 action_label: Read More &rarr;
 action_link: /about
 action_type: text
-description: I am an aspiring social scientist who is broadly interested in international security, armed conflicts, and political methodologies. My goal is to understand why and how armed conflicts occur, particularly religious violence, and what role the laws and state institutions play in this process.
-
+description: I am a project assistant working on migration management and border security at the International Centre for Migration Policy Development. 
 image_left: false
 images:
 - img/revoir2.jpg
@@ -11,7 +10,8 @@ show_action_link: true
 show_social_links: true
 subtitle: 
 text_align_left: true
-title: Muhammet Ozkaraca
+title: Muhammet Özkaraca
+subtitle: Project Assistant @ ICMPD
 type: home
 ---
 
