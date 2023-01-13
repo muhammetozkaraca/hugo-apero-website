@@ -8,7 +8,8 @@ show_intro: true
 intro: |
   I contribute to the writing of the country-level integrated border management strategy and action plan whilst supporting the organization of project-related workshops and thematic focus group meetings through liaising with competent authorities.
 show_outro: true
-outro: Thank you for your time. 
+outro: |
+  <i class="fas fa-kiwi-bird pr2"></i>Thank you for your time to visit my website!
 ---
 
 ** index doesn't contain a body, just front matter above.
