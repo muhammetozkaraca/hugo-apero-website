@@ -7,7 +7,7 @@ number_categories: 3 # set to zero to exclude
 show_intro: true
 show_post_thumbnail: true
 intro: |
-  I contribute to the writing of the country-level integrated border management strategy and action plan whilst supporting the organization of project-related workshops and thematic focus group meetings through liaising with competent authorities. aaaaa
+  I contribute to the writing of the country-level integrated border management strategy and action plan whilst supporting the organization of project-related workshops and thematic focus group meetings through liaising with competent authorities.
 show_outro: true
 outro: |
   <i class="fas fa-kiwi-bird pr2"></i>Thank you for your time to visit my website!
