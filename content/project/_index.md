@@ -8,7 +8,7 @@ cascade:
     show_sidebar_adunit: true
     text_link_label: View all projects
     text_link_url: /project/
-description: Here are some of the data-related projects on which I have previously worked. Yet, I still did not give up, and my goal is to finish them, hopefully, at some point in the future.
+description: Here are some of the data-related projects, which I aim to finish, hopefully, at some point in the future.
 layout: list-grid
 show_author_byline: true
 show_button_links: false
@@ -22,7 +22,7 @@ sidebar:
   text_link_label: ""
   text_link_url: ""
   title: A Sidebar for Your Projects
-title: My (Unfortunate !) Projects
+title: My Project Portfolio
 ---
 
 ** No content for the project index. This file provides front matter for the blog including the layout and boolean options. **
