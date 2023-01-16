@@ -1,8 +1,8 @@
 ---
-action_label: Read More &rarr;
+action_label: <br>About Me<br> &rarr;
 action_link: /about
 action_type: text
-description: I am a project assistant working on migration management and border security at the International Centre for Migration Policy Development. 
+description: I am a project assistant working on migration management and border security at the International Centre for Migration Policy Development (ICMPD). 
 image_left: false
 images:
 - img/revoir2.jpg
