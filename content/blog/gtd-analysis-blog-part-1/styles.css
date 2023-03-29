@@ -1,0 +1,26 @@
+@import url('https://fonts.googleapis.com/css2?family=Gloock&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@300&display=swap');
+
+code {
+  background-color: white;
+  font-family: 'Merriweather', serif;
+}
+
+p {
+  font-family: font-family: 'Playfair Display', serif;
+  font-size: 20px;
+  color: #333;
+}
+
+
+.codeBackground {
+background-color: white;
+}
+
+.codeOutput {
+background-color: white;
+}
+
+
+

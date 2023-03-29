@@ -1,0 +1,261 @@
+---
+title: "Analyzing the Global Terrorism Database - Part I"
+subtitle: ""
+author: Muhammet Ozkaraca
+draft: false
+layout: single
+summary: "In this post, I analyze the Global Terrorism Database using `tidyverse` in R" 
+date: "2023-03-28"
+output:
+  blogdown::html_page:
+    css: styles.css
+    toc: false
+    number_sections: false
+    toc_depth: 1
+---
+
+  <link rel="stylesheet" href="styles.css" type="text/css" />
+
+
+<p>Hosted by the National Consortium for the Study of Terrorism and Responses to Terrorism (START), the Global Terrorism Dataset offers a wide-range of data on terror events occured across worldwide since 1970. <a href="https://www.start.umd.edu/gtd/">In its website</a>, it is written that;</p>
+<blockquote>
+<p>The Global Terrorism Database (GTD) is an open-source database including information on terrorist events around the world from 1970 through 2020 (with annual updates planned for the future). Unlike many other event databases, the GTD includes systematic data on domestic as well as international terrorist incidents that have occurred during this time period and now includes more than 200,000 cases.</p>
+</blockquote>
+<p>In this blog post, I will first demonstrate how to download the data, analyze it and finally produce a map visualising the terror events occurred in different parts of the world using the <code>tidyverse</code> package in R.</p>
+<div id="introductory-steps" class="section level1">
+<h1>Introductory Steps</h1>
+<p>As a first step, the data can be downloaded from the <a href="https://www.start.umd.edu/gtd/contact/download">GTD’s official website</a> by filling out a form. As I do have the data from 2020 already downloaded on my computer, I will not update it. However, if you will be getting the data for the first time, most probably, you will have a more recent version which will offer a more comprehensive point of view. Yet, the steps to clean, analyze and visualize the data will be the same. So, let’s start by first reading the data into our workspace and getting the relevant libraries.</p>
+</div>
+<div id="installing-libraries-and-the-data-into-r" class="section level1">
+<h1>Installing Libraries and the data into R</h1>
+<pre class="r codeBackground"><code>options(scipen=999) # to prevent scientific notation 
+library(readxl) # to read excel files
+library(tidyverse) # for data analysis purposes and visulization -&gt; tidyverse mainly contains ggplot2 and dplyr
+library(maps) # getting geospatial data for countries
+library(countrycode) # this package will help us when we try to minimize the differences with regards to country names across different datasets 
+library(ggtext) # to make the final map better looking</code></pre>
+<p>Now, let’s read the GTD data and the geospatial data determining the boundaries of countries across world into R.</p>
+</div>
+<div id="section" class="section level1 panelset">
+<h1 class="panelset"></h1>
+<div id="code" class="section level2">
+<h2>Code</h2>
+<pre class="r codeBackground"><code># Be careful about where your R working directory is and where your downloaded data is located. If your data is not in the same place where your R working directory is, then R cannot read the data.
+
+gtd_data &lt;- read_excel(&quot;/Users/muhammetozkaraca/Desktop/globalterrorismdb_0522dist.xlsx&quot;) # getting the GTD data
+world &lt;- map_data(&quot;world&quot;) # getting the geospatial data for countries
+
+head(gtd_data)</code></pre>
+</div>
+<div id="output" class="section level2">
+<h2>Output</h2>
+<pre class="codeBackground"><code>## # A tibble: 6 × 135
+##   eventid iyear imonth  iday appro…¹ exten…² resolution country country_txt     
+##     &lt;dbl&gt; &lt;dbl&gt;  &lt;dbl&gt; &lt;dbl&gt; &lt;chr&gt;     &lt;dbl&gt; &lt;dttm&gt;       &lt;dbl&gt; &lt;chr&gt;           
+## 1 1.97e11  1970      7     2 &lt;NA&gt;          0 NA              58 Dominican Repub…
+## 2 1.97e11  1970      0     0 &lt;NA&gt;          0 NA             130 Mexico          
+## 3 1.97e11  1970      1     0 &lt;NA&gt;          0 NA             160 Philippines     
+## 4 1.97e11  1970      1     0 &lt;NA&gt;          0 NA              78 Greece          
+## 5 1.97e11  1970      1     0 &lt;NA&gt;          0 NA             101 Japan           
+## 6 1.97e11  1970      1     1 &lt;NA&gt;          0 NA             217 United States   
+## # … with 126 more variables: region &lt;dbl&gt;, region_txt &lt;chr&gt;, provstate &lt;chr&gt;,
+## #   city &lt;chr&gt;, latitude &lt;dbl&gt;, longitude &lt;dbl&gt;, specificity &lt;dbl&gt;,
+## #   vicinity &lt;dbl&gt;, location &lt;chr&gt;, summary &lt;chr&gt;, crit1 &lt;dbl&gt;, crit2 &lt;dbl&gt;,
+## #   crit3 &lt;dbl&gt;, doubtterr &lt;dbl&gt;, alternative &lt;dbl&gt;, alternative_txt &lt;chr&gt;,
+## #   multiple &lt;dbl&gt;, success &lt;dbl&gt;, suicide &lt;dbl&gt;, attacktype1 &lt;dbl&gt;,
+## #   attacktype1_txt &lt;chr&gt;, attacktype2 &lt;dbl&gt;, attacktype2_txt &lt;chr&gt;,
+## #   attacktype3 &lt;lgl&gt;, attacktype3_txt &lt;lgl&gt;, targtype1 &lt;dbl&gt;, …</code></pre>
+</div>
+</div>
+<div id="section-1" class="section level1">
+<h1></h1>
+<p>As can be seen from the output, the GTD data frame has 209.706 rows, each row corresponding to a different terror event since 1970 and 135 columns as features for these terror incidents. Now, before delving into data analysis part, it should be noted that terrorism, as a concept, has no standard definition, as one old saying put it well <em>“One man’s terrorist might become another’s freedom fighter.”</em> To handle this challenge in terms of defining which attacks can be called as terror incidents, the GTD declares that a terror event must have <strong>the three following criteria</strong>;</p>
+<ul>
+<li>The incident must be intentional</li>
+<li>The incident must entail some level of violence or immediate threat of violence</li>
+<li>The perpetrators of the incidents must be sub-national actors</li>
+</ul>
+<p>Additionally, based on its codebook, <strong>at least two of the following three criteria</strong> must be present for an attack to be called as a <em>terror incident</em>.</p>
+<ul>
+<li>Criterion 1: The act must be aimed at attaining a political, economic, religious, or social goal.</li>
+<li>Criterion 2: There must be evidence of an intention to coerce, intimidate, or convey some other message to a larger audience (or audiences) than the immediate victims.</li>
+<li>Criterion 3: The action must be outside the context of legitimate warfare activities.</li>
+</ul>
+<p>While these criteria are coded in the dataset as <em>crit1</em>, <em>crit2</em>, and <em>crit3</em>, one can subset the whole data based on these criteria as s/he wishes. However, for the sake of this analysis, we will not subset the data. Instead, what we will do right now is to aggregate the data based on countries to see number of terror events per country since 1970, and then merge it with the geosptial data determining the boundaries of countries. In the final step, using this information, we will produce the map output. So, let’s start with aggregating the data according to country-level.</p>
+</div>
+<div id="section-2" class="section level1 panelset">
+<h1 class="panelset"></h1>
+<div id="code-1" class="section level2">
+<h2>Code</h2>
+<pre class="r codeBackground"><code>country_level_terror_events &lt;- gtd_data %&gt;%
+  group_by(country_txt) %&gt;%
+  mutate(terror_events_number = n()) %&gt;%
+  select(country_txt, terror_events_number) %&gt;%
+  unique()
+
+head(country_level_terror_events)</code></pre>
+</div>
+<div id="output-1" class="section level2">
+<h2>Output</h2>
+<pre class="codeBackground"><code>## # A tibble: 6 × 2
+## # Groups:   country_txt [6]
+##   country_txt        terror_events_number
+##   &lt;chr&gt;                             &lt;int&gt;
+## 1 Dominican Republic                   89
+## 2 Mexico                              600
+## 3 Philippines                        8271
+## 4 Greece                             1386
+## 5 Japan                               405
+## 6 United States                      3121</code></pre>
+</div>
+</div>
+<div id="section-3" class="section level1">
+<h1></h1>
+<p>Now, based on the GTD data, we can see that terror events has occurred in 204 different countries since 1970. If we use the <code>arrange()</code> function from the <code>dplyr</code> package containing within the <code>tidyverse</code> to sort the number of terror events per countries since 1970 in a descending order, we can see that the top five countries exposed to the terror events, along with their corresponding terror incident numbers are; <strong>Iraq</strong> - <em>27521</em>, <strong>Afghanistan</strong> - <em>18920</em>, <strong>Pakistan</strong> - <em>15504</em>, <strong>India</strong> - <em>13929</em>, <strong>Colombia</strong> - <em>8915</em>.</p>
+</div>
+<div id="section-4" class="section level1 panelset">
+<h1 class="panelset"></h1>
+<div id="code-2" class="section level2">
+<h2>Code</h2>
+<pre class="r codeBackground"><code>country_level_terror_events %&gt;%
+  arrange(desc(terror_events_number)) </code></pre>
+</div>
+<div id="output-2" class="section level2">
+<h2>Output</h2>
+<pre class="codeBackground"><code>## # A tibble: 204 × 2
+## # Groups:   country_txt [204]
+##    country_txt    terror_events_number
+##    &lt;chr&gt;                         &lt;int&gt;
+##  1 Iraq                          27521
+##  2 Afghanistan                   18920
+##  3 Pakistan                      15504
+##  4 India                         13929
+##  5 Colombia                       8915
+##  6 Philippines                    8271
+##  7 Peru                           6111
+##  8 Yemen                          6027
+##  9 Nigeria                        5550
+## 10 United Kingdom                 5513
+## # … with 194 more rows</code></pre>
+</div>
+</div>
+<div id="section-5" class="section level1">
+<h1></h1>
+<p>After this quick glance at the data, now our tasks is to merge the <code>country_level_terror_events</code> with <code>world</code> data containing the geospatial information for countries’ borders to produce the final map.</p>
+</div>
+<div id="merging-the-datasets" class="section level1">
+<h1>Merging the datasets</h1>
+<p>Before using the powerful <code>left_join()</code> function to merge the two different datasets, let’s see whether there are differences regarding the country names. However, please note that we need to minimize the differences in country names occurring due to either punctuation, abbreviation or some other reasons to have a reliable output. So, in this step, we will take assistance from another power library in R, named <code>countrycode</code> package.</p>
+<p><code>countrycode</code> package helps to convert country names to different standard formats, either numerical or letter-based abbreviations, to minimize the differences in country names occurring for several reasons. So, what we will do now is to convert country names from the two datasets into 3-letter abbreviations and then figure out which countries are different between the two datasets.</p>
+</div>
+<div id="section-6" class="section level1 panelset">
+<h1 class="panelset"></h1>
+<div id="code-3" class="section level2">
+<h2>Code</h2>
+<pre class="r codeBackground"><code>country_level_terror_events$iso3c &lt;- countrycode(country_level_terror_events$country_txt, origin = &#39;country.name&#39;,
+                                                 destination = &#39;iso3c&#39;) 
+world$iso3c &lt;- countrycode(world$region, origin = &#39;country.name&#39;, destination = &#39;iso3c&#39;) 
+
+different_country_names &lt;- setdiff(country_level_terror_events$iso3c, world$iso3c)
+countrycode(different_country_names, origin = &#39;iso3c&#39;, destination = &#39;country.name&#39;) </code></pre>
+</div>
+<div id="output-3" class="section level2">
+<h2>Output</h2>
+<pre class="codeBackground"><code>## [1] &quot;Hong Kong SAR China&quot; &quot;Macao SAR China&quot;</code></pre>
+</div>
+</div>
+<div id="section-7" class="section level1">
+<h1></h1>
+<p>As can be seen from the output, there are only 2 countries having different names across the two datasets we are working on. And this difference happens to appear since the ambiguity with regards to the status of Hong Kong.<a href="#fn1" class="footnote-ref" id="fnref1"><sup>1</sup></a></p>
+<p>Now, what we will do is to merge these two datasets based on the 3-letter abbreviations to produce the final map.</p>
+</div>
+<div id="section-8" class="section level1 panelset">
+<h1 class="panelset"></h1>
+<div id="code-4" class="section level2">
+<h2>Code</h2>
+<pre class="r codeBackground"><code>final_data &lt;- world %&gt;%
+  left_join(country_level_terror_events, by = c(&quot;iso3c&quot;))
+
+head(final_data)</code></pre>
+</div>
+<div id="output-4" class="section level2">
+<h2>Output</h2>
+<pre class="codeBackground"><code>##        long      lat group order region subregion iso3c country_txt
+## 1 -69.89912 12.45200     1     1  Aruba      &lt;NA&gt;   ABW        &lt;NA&gt;
+## 2 -69.89571 12.42300     1     2  Aruba      &lt;NA&gt;   ABW        &lt;NA&gt;
+## 3 -69.94219 12.43853     1     3  Aruba      &lt;NA&gt;   ABW        &lt;NA&gt;
+## 4 -70.00415 12.50049     1     4  Aruba      &lt;NA&gt;   ABW        &lt;NA&gt;
+## 5 -70.06612 12.54697     1     5  Aruba      &lt;NA&gt;   ABW        &lt;NA&gt;
+## 6 -70.05088 12.59707     1     6  Aruba      &lt;NA&gt;   ABW        &lt;NA&gt;
+##   terror_events_number
+## 1                   NA
+## 2                   NA
+## 3                   NA
+## 4                   NA
+## 5                   NA
+## 6                   NA</code></pre>
+</div>
+</div>
+<div id="section-9" class="section level1">
+<h1></h1>
+<p>Now, let’s look at the map we produced.</p>
+</div>
+<div id="section-10" class="section level1 panelset">
+<h1 class="panelset"></h1>
+<div id="code-5" class="section level2">
+<h2>Code</h2>
+<pre class="r codeBackground"><code>plot &lt;- final_data %&gt;%
+  filter(region != c(&quot;Antarctica&quot;)) %&gt;% # we exclude Antarctica and as it does not have any corresponding number of terror events and not many people live there. 
+  ggplot(aes(x = long, y = lat, group = group, fill = terror_events_number)) +
+  geom_polygon()</code></pre>
+</div>
+<div id="output-5" class="section level2">
+<h2>Output</h2>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/unnamed-chunk-13-1.png" width="672" /></p>
+</div>
+</div>
+<div id="final-steps" class="section level1">
+<h1>Final Steps</h1>
+<p>Now, let’s make the map a little bit beautiful.</p>
+</div>
+<div id="section-11" class="section level1 panelset">
+<h1 class="panelset"></h1>
+<div id="code-6" class="section level2">
+<h2>Code</h2>
+<pre class="r codeBackground"><code>plot &lt;- final_data %&gt;%
+  filter(region != c(&quot;Antarctica&quot;)) %&gt;% # we exclude Antarctica and as it does not have any corresponding number of terror events and not many people live there. 
+  ggplot(aes(x = long, y = lat, group = group, fill = terror_events_number)) +
+  geom_polygon(color = &quot;black&quot;, lwd = 0.2) +
+  labs(title = &quot;Number of Terror Events Across World (1970-2020)&quot;,
+       caption = &quot;Source: Global Terrorism Database&quot;) +
+  ggthemes::theme_map() +
+  paletteer::scale_fill_paletteer_c(&quot;ggthemes::Orange&quot;,
+                                    name = &quot;Number of Terror Events&quot;) +
+  guides(size = guide_legend(title.position=&quot;top&quot;, title.hjust = 0.5)) +
+  theme(plot.title = element_markdown(size = 20, hjust = 0.5, lineheight = 0),
+        plot.caption = element_markdown(size = 8, hjust = 0, lineheight = 0),
+        plot.background = element_rect(fill = &quot;white&quot;, color = &quot;white&quot;),
+        panel.border = element_blank(), 
+        axis.title.x = element_blank(), 
+        axis.title.y = element_blank(), 
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks = element_blank(),
+        legend.position = c(0.4, -0.05),
+        legend.title = element_text(size = 12, lineheight = 0.1, hjust = 0.5, vjust = 1), 
+        legend.text = element_text(size = 8, lineheight = 0.2, hjust = 0.5, vjust = 23), 
+        legend.direction = &quot;horizontal&quot;, 
+        legend.key.height= unit(0.45, &quot;cm&quot;),
+        legend.key.width= unit(1.05, &quot;cm&quot;)) </code></pre>
+</div>
+<div id="output-6" class="section level2">
+<h2>Output</h2>
+<p><img src="featured.png" width="3150" /></p>
+</div>
+</div>
+<div class="footnotes footnotes-end-of-document">
+<hr />
+<ol>
+<li id="fn1"><p>Please note that, because the GTD data contains terror events since 1970, countries that no longer exists such as Yugoslavia or East Germany, have corresponding number of terror events. We do exclude these in our analysis since they are either splitted into different countries as in the case of Yugoslavia or they formed new ones such as the unification of East and West Germany.<a href="#fnref1" class="footnote-back">↩︎</a></p></li>
+</ol>
+</div>
