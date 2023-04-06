@@ -3,9 +3,14 @@
 @import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@300&display=swap');
 
 code {
-  background-color: #0b903f;
+  background-color: #FFFFFF;
   font-family: 'Merriweather', serif;
 }
+
+:not(pre) > code {
+  background-color: #FFA384;
+}
+
 
 p {
   font-family: font-family: 'Playfair Display', serif;
