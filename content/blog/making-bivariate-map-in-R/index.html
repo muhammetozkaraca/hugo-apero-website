@@ -1,0 +1,293 @@
+---
+title: "Making Bivariate Maps in R"
+subtitle: ""
+author: Muhammet Ozkaraca
+draft: false
+layout: single
+summary: "In this post, I will make a bivariate map for the 1<sup>st</sup> round of the 2023 Turkish Election data with the help of `biscale` and `ggplot2` packages." 
+date: "2023-05-20"
+output:
+  blogdown::html_page:
+    css: styles.css
+    toc: true
+    number_sections: false
+    toc_depth: 3
+---
+
+  <link rel="stylesheet" href="styles.css" type="text/css" />
+
+<div id="TOC">
+<ul>
+<li><a href="#introductory-steps-loading-libraries-data-data-wrangling-merging" id="toc-introductory-steps-loading-libraries-data-data-wrangling-merging">Introductory Steps (Loading Libraries &amp; Data + Data Wrangling &amp; Merging)</a></li>
+<li><a href="#making-the-bivariate-map-using-biscale-package-and-ggplot2" id="toc-making-the-bivariate-map-using-biscale-package-and-ggplot2">Making the bivariate map using <code>biscale</code> package and <code>ggplot2</code></a></li>
+<li><a href="#final-touches" id="toc-final-touches">Final touches</a></li>
+</ul>
+</div>
+
+<p>Bivariate maps are particularly useful when you want to demonstrate the relationship between two specific variables on a map. I have always admired the concept of creating such maps. However, initially, it seemed like a daunting task, especially after reading Timo Grossenbacher’s <a href="https://timogrossenbacher.ch/2019/04/bivariate-maps-with-ggplot2-and-sf/">blog post</a> on regional income inequality in Switzerland.</p>
+<p>Please don’t misunderstand me, as I believe that this blog post was well-documented and elegantly explained each step in creating such maps. However, being somewhat impatient at sometimes, I was mainly interested in obtaining the final output without paying much attention to other points like data wrangling or etc. (Although I will have to do some data wrangling later hahah) It seems that Grossenbacher shared the same sentiment, as he, along with Christopher Prener and Angelo Zehr, developed a package called <code>biscale</code>, which simplifies the entire process.</p>
+<p>Without delving into further details, let’s begin with the initial steps to create a bivariate map for the first round of the 2023 Turkish Election data.</p>
+<div id="introductory-steps-loading-libraries-data-data-wrangling-merging" class="section level2">
+<h2>Introductory Steps (Loading Libraries &amp; Data + Data Wrangling &amp; Merging)</h2>
+<p>As done in previous posts, let’s begin by loading the packages that we will be using throughout this process.</p>
+<pre class="r codeBackground"><code>options(scipen=999) # to prevent scientific notation 
+library(readxl) # to read excel files
+library(tidyverse) # for data analysis purposes and visulization -&gt; tidyverse mainly contains ggplot2 and dplyr
+library(biscale)
+library(showtext) # in case we might want to customize the fonts further, I am not sure about that at this point :)
+library(ggtext) # to make the final map better looking, particularly to customize the title, subtitle, legends etc.
+library(cowplot) # to place the legend and the map elegantly
+library(sf) # to read geosparial data into R</code></pre>
+<p>Now, let’s read the Turkish election data and the relevant spatial data into R.</p>
+<div class="panelset">
+<div class="panel">
+<p><span class="panel-name">Code</span></p>
+<pre class="r codeBackground"><code># Be careful about where your R working directory is and where your downloaded data is located. If your data is not in the same place where your R working directory is, then R cannot read the data.
+
+election_2023 &lt;- read_excel(&quot;/Users/muhammetozkaraca/Desktop/Seçim_2023_Analizi/seçim_2023.xlsx&quot;) 
+districts_geo_data &lt;- read_sf(&quot;/Users/muhammetozkaraca/Desktop/Seçim_2023_Analizi/turkey_administrativelevels0_1_2/tur_polbna_adm2.shp&quot;)
+
+str(election_2023)</code></pre>
+</div>
+<div class="panel">
+<p><span class="panel-name">Output</span></p>
+<pre class="codeBackground"><code>## tibble [974 × 9] (S3: tbl_df/tbl/data.frame)
+##  $ İl                  : chr [1:974] &quot;ADANA&quot; &quot;ADANA&quot; &quot;ADANA&quot; &quot;ADANA&quot; ...
+##  $ İlçe                : chr [1:974] &quot;ALADAĞ&quot; &quot;CEYHAN&quot; &quot;ÇUKUROVA&quot; &quot;FEKE&quot; ...
+##  $ Sandık Sayısı       : chr [1:974] &quot;51&quot; &quot;357&quot; &quot;790&quot; &quot;60&quot; ...
+##  $ Seçmen Sayısı       : num [1:974] 12330 112582 287869 12788 20211 ...
+##  $ toplam_geçerli_oy   : num [1:974] 10872 96851 256488 10661 17719 ...
+##  $ Recep Tayyip Erdoğan: num [1:974] 6679 44001 80498 6878 11636 ...
+##  $ Kemal Kılıçdaroğlu  : num [1:974] 3607 48273 161358 3092 5165 ...
+##  $ Sinan Oğan          : num [1:974] 502 4132 14021 588 825 ...
+##  $ Muharrem İnce       : num [1:974] 84 445 611 103 93 93 33 431 53 60 ...</code></pre>
+</div>
+</div>
+<p>As can be seen from the output, we do have <em>9 different variables</em> in the 2023 election dataset. They are;</p>
+<ul>
+<li><strong><em>İl</em></strong>: Name of the province</li>
+<li><strong><em>İlçe</em></strong>: Name of the district</li>
+<li><strong><em>Sandık Sayısı</em></strong>: The total number of ballot boxes in the given district</li>
+<li><strong><em>Seçmen Sayısı</em></strong>: Th total number of voters in the given district</li>
+<li><strong><em>toplam_geçerli_oy</em></strong>: The total number of valid votes in the given district</li>
+<li><strong><em>Recep Tayyip Erdoğan</em></strong>: The total number of votes that Recep Tayyip Erdoğan obtained in the first round within the given district.</li>
+<li><strong><em>Kemal Kılıçdaroğlu</em></strong>: The total number of votes that Kemal Kılıçdaroğlu obtained in the first round within the given district.</li>
+<li><strong><em>Sinan Oğan</em></strong>: The total number of votes that Sinan Oğan obtained in the first round within the given district.</li>
+<li><strong><em>Muharrem İnce</em></strong>: The total number of votes that Muharrem İnce obtained in the first round within the given district.</li>
+</ul>
+<p>Now, with the bivariate map, we can explore various relationships between different variables present in the election data. For instance, we can examine the votes obtained by <code>Kemal Kılıçdaroğlu</code> versus <code>Sinan Oğan</code> in the given district. However, considering the recent public debate in Turkey, particularly regarding whether Sinan Oğan’s voters would support Recep Tayyip Erdoğan if Oğan announces his support for Erdoğan, we will create a bivariate map at the district level to compare Oğan’s performance relative to Erdoğan’s in the first round of elections.</p>
+<p>To accomplish this, we will merge two datasets: the election data and the spatial data containing information on the geographical boundaries of the districts. However, we may encounter a challenge at this point. Due to the distinct characters used in the Turkish language, the district names in the election data might not correspond to the names in the geospatial data<a href="#fn1" class="footnote-ref" id="fnref1"><sup>1</sup></a>. To address this, we will employ a workaround. We will create a new variable called <code>id</code> in both datasets by concatenating the name and district name information. Then, we will use a short code snippet to convert the Turkish characters to English. This approach will help us overcome the issue swiftly. Let’s proceed with these steps:</p>
+<div class="panelset">
+<div class="panel">
+<p><span class="panel-name">Code</span></p>
+<pre class="r codeBackground"><code>election_2023 &lt;- election_2023 %&gt;%
+  mutate(İlçe = gsub(&quot; MERKEZ&quot;, &quot;&quot;, İlçe),
+         İlçe = case_when(İlçe == 45065 ~ &quot;19 MAYIS&quot;, 
+                          TRUE ~ İlçe),
+         id = paste(İl, İlçe)) %&gt;%
+  slice(1:973) 
+
+districts_geo_data  &lt;- districts_geo_data  %&gt;%
+  mutate(id = paste(adm1_en, adm2_en))
+
+election_2023[] &lt;- lapply(election_2023, 
+                       function(x) str_replace_all(x, c(&quot;İ&quot;=&quot;I&quot;, &quot;Ö&quot;=&quot;O&quot;, &quot;Ğ&quot; = &quot;G&quot;, &quot;Ö&quot; = &quot;O&quot;, &quot;Ş&quot; = &quot;S&quot;, 
+                                                        &quot;Ü&quot; = &quot;U&quot;, &quot;Ç&quot;=&quot;C&quot;)))
+
+setdiff(election_2023$id, districts_geo_data$id)</code></pre>
+</div>
+<div class="panel">
+<p><span class="panel-name">Output</span></p>
+<pre class="codeBackground"><code>## character(0)</code></pre>
+</div>
+</div>
+<p>Now, as can be seen from the code output, the two <code>id</code> columns across datasets correspond to each other totally. Now, let’s merge them.</p>
+<pre class="r codeBackground"><code>data &lt;- election_2023 %&gt;%
+  left_join(districts_geo_data, by = &quot;id&quot;) %&gt;%
+  mutate(`Sandık Sayısı` = as.numeric(`Sandık Sayısı`),
+         `Seçmen Sayısı` = as.numeric( `Seçmen Sayısı`),
+         toplam_geçerli_oy = as.numeric(toplam_geçerli_oy),
+         `Recep Tayyip Erdoğan` = as.numeric(`Recep Tayyip Erdoğan`),
+         `Kemal Kılıçdaroğlu` = as.numeric(`Kemal Kılıçdaroğlu`),
+         `Sinan Oğan` = as.numeric(`Sinan Oğan`),
+         `Muharrem İnce` = as.numeric(`Muharrem İnce`)) %&gt;%
+  group_by(İlçe) %&gt;%
+  dplyr::select(İl, İlçe, `Recep Tayyip Erdoğan`, `Sinan Oğan`, geometry) </code></pre>
+<p>So, right now we have all the information we need to make map by keeping them in <code>data</code>, the votes Erdoğan and Oğan obtained per district along with the corresponding district’s boundaries.</p>
+</div>
+<div id="making-the-bivariate-map-using-biscale-package-and-ggplot2" class="section level2">
+<h2>Making the bivariate map using <code>biscale</code> package and <code>ggplot2</code></h2>
+<p>What comes next is to take advantage of the <code>biscale</code> package to make the initial steps of the bivariate map with the following code chunk;</p>
+<div class="panelset">
+<div class="panel">
+<p><span class="panel-name">Code</span></p>
+<pre class="r codeBackground"><code>bivariate_map &lt;- bi_class(data, x = `Recep Tayyip Erdoğan`, y = `Sinan Oğan`, style = &quot;quantile&quot;, dim = 4)</code></pre>
+</div>
+<div class="panel">
+<p><span class="panel-name">Output</span></p>
+<pre class="codeBackground"><code>## gropd_df [973 × 6] (S3: grouped_df/tbl_df/tbl/data.frame)
+##  $ İl                  : chr [1:973] &quot;ADANA&quot; &quot;ADANA&quot; &quot;ADANA&quot; &quot;ADANA&quot; ...
+##  $ İlçe                : chr [1:973] &quot;ALADAG&quot; &quot;CEYHAN&quot; &quot;CUKUROVA&quot; &quot;FEKE&quot; ...
+##  $ Recep Tayyip Erdoğan: num [1:973] 6679 44001 80498 6878 11636 ...
+##  $ Sinan Oğan          : num [1:973] 502 4132 14021 588 825 ...
+##  $ geometry            :sfc_MULTIPOLYGON of length 973; first list element: List of 1
+##   ..$ :List of 1
+##   .. ..$ : num [1:1330, 1:2] 35.2 35.2 35.2 35.2 35.2 ...
+##   ..- attr(*, &quot;class&quot;)= chr [1:3] &quot;XY&quot; &quot;MULTIPOLYGON&quot; &quot;sfg&quot;
+##  $ bi_class            : chr [1:973] &quot;2-2&quot; &quot;4-4&quot; &quot;4-4&quot; &quot;2-2&quot; ...
+##  - attr(*, &quot;groups&quot;)= tibble [948 × 2] (S3: tbl_df/tbl/data.frame)
+##   ..$ İlçe : chr [1:948] &quot;19 MAYIS&quot; &quot;ABANA&quot; &quot;ACIGOL&quot; &quot;ACIPAYAM&quot; ...
+##   ..$ .rows: list&lt;int&gt; [1:948] 
+##   .. ..$ : int 737
+##   .. ..$ : int 499
+##   .. ..$ : int 676
+##   .. ..$ : int 246
+##   .. ..$ : int 156
+##   .. ..$ : int 422
+##   .. ..$ : int 721
+##   .. ..$ : int 164
+##   .. ..$ : int 16
+##   .. ..$ : int 636
+##   .. ..$ : int 25
+##   .. ..$ : int 890
+##   .. ..$ : int 291
+##   .. ..$ : int 180
+##   .. ..$ : int 500
+##   .. ..$ : int 43
+##   .. ..$ : int 562
+##   .. ..$ : int 165
+##   .. ..$ : int 619
+##   .. ..$ : int 810
+##   .. ..$ : int 606
+##   .. ..$ : int 836
+##   .. ..$ : int 543
+##   .. ..$ : int 966
+##   .. ..$ : int 868
+##   .. ..$ : int 409
+##   .. ..$ : int 620
+##   .. ..$ : int 770
+##   .. ..$ : int 519
+##   .. ..$ : int 690
+##   .. ..$ : int 563
+##   .. ..$ : int 544
+##   .. ..$ : int 891
+##   .. ..$ : int 564
+##   .. ..$ : int 83
+##   .. ..$ : int [1:2] 84 396
+##   .. ..$ : int 491
+##   .. ..$ : int 722
+##   .. ..$ : int 58
+##   .. ..$ : int 232
+##   .. ..$ : int 292
+##   .. ..$ : int 738
+##   .. ..$ : int 1
+##   .. ..$ : int 85
+##   .. ..$ : int 882
+##   .. ..$ : int 621
+##   .. ..$ : int 461
+##   .. ..$ : int 798
+##   .. ..$ : int 331
+##   .. ..$ : int 128
+##   .. ..$ : int 59
+##   .. ..$ : int 565
+##   .. ..$ : int 691
+##   .. ..$ : int 943
+##   .. ..$ : int 381
+##   .. ..$ : int 593
+##   .. ..$ : int [1:2] 181 771
+##   .. ..$ : int 684
+##   .. ..$ : int 354
+##   .. ..$ : int 929
+##   .. ..$ : int 51
+##   .. ..$ : int 410
+##   .. ..$ : int 637
+##   .. ..$ : int 382
+##   .. ..$ : int 345
+##   .. ..$ : int 501
+##   .. ..$ : int 811
+##   .. ..$ : int 939
+##   .. ..$ : int 607
+##   .. ..$ : int 933
+##   .. ..$ : int 102
+##   .. ..$ : int 709
+##   .. ..$ : int 608
+##   .. ..$ : int 103
+##   .. ..$ : int 293
+##   .. ..$ : int 723
+##   .. ..$ : int 944
+##   .. ..$ : int 423
+##   .. ..$ : int 492
+##   .. ..$ : int 812
+##   .. ..$ : int 383
+##   .. ..$ : int 799
+##   .. ..$ : int 647
+##   .. ..$ : int 104
+##   .. ..$ : int 739
+##   .. ..$ : int 311
+##   .. ..$ : int 594
+##   .. ..$ : int 397
+##   .. ..$ : int 740
+##   .. ..$ : int 424
+##   .. ..$ : int 220
+##   .. ..$ : int 677
+##   .. ..$ : int 425
+##   .. ..$ : int 761
+##   .. ..$ : int 60
+##   .. ..$ : int 692
+##   .. ..$ : int [1:2] 411 869
+##   .. ..$ : int 898
+##   .. ..$ : int 901
+##   .. .. [list output truncated]
+##   .. ..@ ptype: int(0) 
+##   ..- attr(*, &quot;.drop&quot;)= logi TRUE</code></pre>
+</div>
+</div>
+<p>As observed in the code above, we have introduced a new variable named <code>bi_class</code> using the <code>bi_class()</code> function from the <code>biscale</code> package. The purpose of this variable is to determine the position of the associated value within the color grid that will be used in the bivariate map<a href="#fn2" class="footnote-ref" id="fnref2"><sup>2</sup></a>.</p>
+<p>Please note that we have placed Recep Tayyip Erdoğan on the x-axis and Sinan Oğan on the y-axis by setting the dimension (<code>dim</code>) parameter to 4. This signifies that the color grid in the bivariate map will have a size of 4x4.</p>
+<p>Lastly, the <code>style</code> argument has been set to <code>quantile</code> in order to enhance the visibility of differences. Although there are other options available such as <code>equal</code>, <code>fisher</code>, and <code>jenks</code>, <code>quantile</code> is chosen here based on the package description, which can also be found at <a href="https://chris-prener.github.io/biscale/articles/biscale.html">here</a></p>
+<blockquote>
+<blockquote>
+<p>The default “quantile” approach will create relatively equal “buckets” of data for mapping, with a break created at the median (50th percentile) for a two-by-two map or at the 33rd and 66th percentiles for a three-by-three map. For a four-by-four map, breaks are created at the 25th, 50th (median), and 75th percentiles.</p>
+</blockquote>
+</blockquote>
+</div>
+<div id="final-touches" class="section level2">
+<h2>Final touches</h2>
+<p>Now, let’s make the plot finally. Note that we will make the map initially, then make a corresponding legend and finally put them together by taking advantage of <code>draw_plot()</code> function from the <code>cowplot</code> package.</p>
+<div class="panelset">
+<div class="panel">
+<p><span class="panel-name">Code</span></p>
+<pre class="r codeBackground"><code>font_add_google(&quot;Prata&quot;, family = &quot;title&quot;, regular.wt = 400)
+showtext_auto()
+
+map &lt;- ggplot() +
+  geom_sf(data = bivariate_map, mapping = aes(fill = bi_class, geometry = geometry), 
+          color = &quot;white&quot;, size = 0.1, show.legend = FALSE) +
+  bi_scale_fill(pal = &quot;GrPink2&quot;, dim = 4) +
+  labs(title = &quot;Erdogan&#39;s Vote vs. Ogan&#39;s Vote per District Level&quot;) +
+  theme_void() +
+  theme(plot.title = element_markdown(family = &quot;title&quot;, size = 24, color = &quot;#4A7BA8FF&quot;, hjust = 0.5))
+
+legend &lt;- bi_legend(pal = &quot;GrPink2&quot;,
+                    dim = 4,
+                    xlab = &quot;Higher Erdoğan&quot;,
+                    ylab = &quot;Higher Oğan &quot;,
+                    size = 8)
+
+# combine map with legend
+finalPlot &lt;- ggdraw(map) +
+  draw_plot(legend, 0.1, .05, 0.2, 0.2)</code></pre>
+</div>
+<div class="panel">
+<p><span class="panel-name">Output</span>
+<img src="featured.png" width="1440" /></p>
+</div>
+</div>
+</div>
+<div class="footnotes footnotes-end-of-document">
+<hr />
+<ol>
+<li id="fn1"><p>For instance, there is ‘Ğ’ letter in Turkish, which is not used in other languages<a href="#fnref1" class="footnote-back">↩︎</a></p></li>
+<li id="fn2"><p>If you do not understand what is meant here, do not worry. Most probably the problem is not related to you but me. I could not find any better phrase to describe the issue here tbh. Sorry for that, but please check that again when the final output is made since I think it will make sense at that time.<a href="#fnref2" class="footnote-back">↩︎</a></p></li>
+</ol>
+</div>

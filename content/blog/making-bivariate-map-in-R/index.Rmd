@@ -1,0 +1,213 @@
+---
+title: "Making Bivariate Maps in R"
+subtitle: ""
+author: Muhammet Ozkaraca
+draft: false
+layout: single
+summary: "In this post, I will make a bivariate map for the 1<sup>st</sup> round of the 2023 Turkish Election data with the help of `biscale` and `ggplot2` packages." 
+date: "2023-05-20"
+output:
+  blogdown::html_page:
+    css: styles.css
+    toc: true
+    number_sections: false
+    toc_depth: 3
+---
+
+```{r setup, include=FALSE}
+## Global options
+knitr::opts_chunk$set(cache = TRUE)
+```
+
+
+Bivariate maps are particularly useful when you want to demonstrate the relationship between two specific variables on a map. I have always admired the concept of creating such maps. However, initially, it seemed like a daunting task, especially after reading Timo Grossenbacher's [blog post](https://timogrossenbacher.ch/2019/04/bivariate-maps-with-ggplot2-and-sf/) on regional income inequality in Switzerland.
+
+Please don't misunderstand me, as I believe that this blog post was well-documented and elegantly explained each step in creating such maps. However, being somewhat impatient at sometimes, I was mainly interested in obtaining the final output without paying much attention to other points like data wrangling or etc. (Although I will have to do some data wrangling later hahah) It seems that Grossenbacher shared the same sentiment, as he, along with Christopher Prener and Angelo Zehr, developed a package called `biscale`, which simplifies the entire process.
+
+Without delving into further details, let's begin with the initial steps to create a bivariate map for the first round of the 2023 Turkish Election data.
+
+## Introductory Steps (Loading Libraries & Data + Data Wrangling & Merging)
+
+As done in previous posts, let's begin by loading the packages that we will be using throughout this process.
+
+```{r loading_libraries, warning=FALSE, message=FALSE, echo=TRUE, class.source="codeBackground"}
+options(scipen=999) # to prevent scientific notation 
+library(readxl) # to read excel files
+library(tidyverse) # for data analysis purposes and visulization -> tidyverse mainly contains ggplot2 and dplyr
+library(biscale)
+library(showtext) # in case we might want to customize the fonts further, I am not sure about that at this point :)
+library(ggtext) # to make the final map better looking, particularly to customize the title, subtitle, legends etc.
+library(cowplot) # to place the legend and the map elegantly
+library(sf) # to read geosparial data into R
+```
+
+Now, let's read the Turkish election data and the relevant spatial data into R. 
+
+::::: {.panelset}
+::: {.panel}
+[Code]{.panel-name}
+```{r reading_data, warning=FALSE, message=FALSE, echo=TRUE, results = FALSE, class.source="codeBackground"}
+# Be careful about where your R working directory is and where your downloaded data is located. If your data is not in the same place where your R working directory is, then R cannot read the data.
+
+election_2023 <- read_excel("/Users/muhammetozkaraca/Desktop/Seçim_2023_Analizi/seçim_2023.xlsx") 
+districts_geo_data <- read_sf("/Users/muhammetozkaraca/Desktop/Seçim_2023_Analizi/turkey_administrativelevels0_1_2/tur_polbna_adm2.shp")
+
+str(election_2023)
+```
+:::
+
+::: {.panel}
+[Output]{.panel-name}
+```{r output1, echo=FALSE, eval=TRUE, class.output="codeBackground"}
+str(election_2023)
+```
+:::
+
+:::::
+
+As can be seen from the output, we do have *9 different variables* in the 2023 election dataset. They are;
+
+- ***İl***: Name of the province
+- ***İlçe***: Name of the district
+- ***Sandık Sayısı***: The total number of ballot boxes in the given district
+- ***Seçmen Sayısı***: Th total number of voters in the given district
+- ***toplam_geçerli_oy***: The total number of valid votes in the given district
+- ***Recep Tayyip Erdoğan***: The total number of votes that Recep Tayyip Erdoğan obtained in the first round within the given district.
+- ***Kemal Kılıçdaroğlu***: The total number of votes that Kemal Kılıçdaroğlu obtained in the first round within the given district.
+- ***Sinan Oğan***: The total number of votes that Sinan Oğan obtained in the first round within the given district.
+- ***Muharrem İnce***: The total number of votes that Muharrem İnce obtained in the first round within the given district.
+
+
+Now, with the bivariate map, we can explore various relationships between different variables present in the election data. For instance, we can examine the votes obtained by `Kemal Kılıçdaroğlu` versus `Sinan Oğan` in the given district. However, considering the recent public debate in Turkey, particularly regarding whether Sinan Oğan's voters would support Recep Tayyip Erdoğan if Oğan announces his support for Erdoğan, we will create a bivariate map at the district level to compare Oğan's performance relative to Erdoğan's in the first round of elections.
+
+To accomplish this, we will merge two datasets: the election data and the spatial data containing information on the geographical boundaries of the districts. However, we may encounter a challenge at this point. Due to the distinct characters used in the Turkish language, the district names in the election data might not correspond to the names in the geospatial data^[For instance, there is 'Ğ' letter in Turkish, which is not used in other languages]. To address this, we will employ a workaround. We will create a new variable called `id` in both datasets by concatenating the name and district name information. Then, we will use a short code snippet to convert the Turkish characters to English. This approach will help us overcome the issue swiftly. Let's proceed with these steps:
+
+::::: {.panelset}
+::: {.panel}
+[Code]{.panel-name}
+```{r data_cleaning, warning=FALSE, message=FALSE, echo=TRUE, results = FALSE, class.source="codeBackground"}
+
+election_2023 <- election_2023 %>%
+  mutate(İlçe = gsub(" MERKEZ", "", İlçe),
+         İlçe = case_when(İlçe == 45065 ~ "19 MAYIS", 
+                          TRUE ~ İlçe),
+         id = paste(İl, İlçe)) %>%
+  slice(1:973) 
+
+districts_geo_data  <- districts_geo_data  %>%
+  mutate(id = paste(adm1_en, adm2_en))
+
+election_2023[] <- lapply(election_2023, 
+                       function(x) str_replace_all(x, c("İ"="I", "Ö"="O", "Ğ" = "G", "Ö" = "O", "Ş" = "S", 
+                                                        "Ü" = "U", "Ç"="C")))
+
+setdiff(election_2023$id, districts_geo_data$id)
+```
+:::
+
+::: {.panel}
+[Output]{.panel-name}
+```{r output2, echo=FALSE, eval=TRUE, class.output="codeBackground"}
+
+setdiff(election_2023$id, districts_geo_data$id)
+
+```
+:::
+:::::
+
+Now, as can be seen from the code output, the two `id` columns across datasets correspond to each other totally. Now, let's merge them. 
+
+
+```{r merging_data, warning=FALSE, message=FALSE, echo=TRUE, results = FALSE, class.source="codeBackground"}
+
+data <- election_2023 %>%
+  left_join(districts_geo_data, by = "id") %>%
+  mutate(`Sandık Sayısı` = as.numeric(`Sandık Sayısı`),
+         `Seçmen Sayısı` = as.numeric( `Seçmen Sayısı`),
+         toplam_geçerli_oy = as.numeric(toplam_geçerli_oy),
+         `Recep Tayyip Erdoğan` = as.numeric(`Recep Tayyip Erdoğan`),
+         `Kemal Kılıçdaroğlu` = as.numeric(`Kemal Kılıçdaroğlu`),
+         `Sinan Oğan` = as.numeric(`Sinan Oğan`),
+         `Muharrem İnce` = as.numeric(`Muharrem İnce`)) %>%
+  group_by(İlçe) %>%
+  dplyr::select(İl, İlçe, `Recep Tayyip Erdoğan`, `Sinan Oğan`, geometry) 
+```
+
+
+So, right now we have all the information we need to make map by keeping them in `data`, the votes Erdoğan and Oğan obtained per district along with the corresponding district's boundaries.
+
+## Making the bivariate map using `biscale` package and `ggplot2`
+
+What comes next is to take advantage of the `biscale` package to make the initial steps of the bivariate map with the following code chunk;
+
+::::: {.panelset}
+::: {.panel}
+[Code]{.panel-name}
+```{r biscale_package_intro, warning=FALSE, message=FALSE, echo=TRUE, results = FALSE, class.source="codeBackground"}
+bivariate_map <- bi_class(data, x = `Recep Tayyip Erdoğan`, y = `Sinan Oğan`, style = "quantile", dim = 4)
+```
+:::
+
+::: {.panel}
+[Output]{.panel-name}
+```{r output3, echo=FALSE, eval=TRUE, class.output="codeBackground"}
+str(bivariate_map)
+```
+:::
+
+:::::
+
+As observed in the code above, we have introduced a new variable named `bi_class` using the `bi_class()` function from the `biscale` package. The purpose of this variable is to determine the position of the associated value within the color grid that will be used in the bivariate map^[If you do not understand what is meant here, do not worry. Most probably the problem is not related to you but me. I could not find any better phrase to describe the issue here tbh. Sorry for that, but please check that again when the final output is made since I think it will make sense at that time.]. 
+
+Please note that we have placed Recep Tayyip Erdoğan on the x-axis and Sinan Oğan on the y-axis by setting the dimension (`dim`) parameter to 4. This signifies that the color grid in the bivariate map will have a size of 4x4.
+
+Lastly, the `style` argument has been set to `quantile` in order to enhance the visibility of differences. Although there are other options available such as `equal`, `fisher`, and `jenks`, `quantile` is chosen here based on the package description, which can also be found at [here](https://chris-prener.github.io/biscale/articles/biscale.html)
+
+>>The default "quantile" approach will create relatively equal “buckets” of data for mapping, with a break created at the median (50th percentile) for a two-by-two map or at the 33rd and 66th percentiles for a three-by-three map. For a four-by-four map, breaks are created at the 25th, 50th (median), and 75th percentiles.
+
+## Final touches
+
+Now, let's make the plot finally. Note that we will make the map initially, then make a corresponding legend and finally put them together by taking advantage of `draw_plot()` function from the `cowplot` package. 
+
+::::: {.panelset}
+::: {.panel}
+[Code]{.panel-name}
+```{r making_the_map, warning=FALSE, message=FALSE, echo=TRUE, results = FALSE, class.source="codeBackground"}
+font_add_google("Prata", family = "title", regular.wt = 400)
+showtext_auto()
+
+map <- ggplot() +
+  geom_sf(data = bivariate_map, mapping = aes(fill = bi_class, geometry = geometry), 
+          color = "white", size = 0.1, show.legend = FALSE) +
+  bi_scale_fill(pal = "GrPink2", dim = 4) +
+  labs(title = "Erdogan's Vote vs. Ogan's Vote per District Level") +
+  theme_void() +
+  theme(plot.title = element_markdown(family = "title", size = 24, color = "#4A7BA8FF", hjust = 0.5))
+
+legend <- bi_legend(pal = "GrPink2",
+                    dim = 4,
+                    xlab = "Higher Erdoğan",
+                    ylab = "Higher Oğan ",
+                    size = 8)
+
+# combine map with legend
+finalPlot <- ggdraw(map) +
+  draw_plot(legend, 0.1, .05, 0.2, 0.2)
+```
+:::
+
+::: {.panel}
+[Output]{.panel-name}
+```{r output4, echo=FALSE, eval=TRUE, class.output="codeBackground"}
+knitr::include_graphics("/Users/muhammetozkaraca/Desktop/Github-Repos/hugo-apero-website/content/blog/making-bivariate-map-in-R/featured.png")
+```
+:::
+
+:::::
+
+
+
+
+
+
+
