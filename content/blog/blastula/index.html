@@ -5,10 +5,24 @@ draft: false
 layout: single
 summary: "In this post, I show how to send autmated and customized emails in R using `blastula`." 
 date: "2021-11-05"
+output:
+  blogdown::html_page:
+    css: styles.css
+    toc: true
+    number_sections: false
+    toc_depth: 3
 ---
 
-<script src="{{< blogdown/postref >}}index_files/header-attrs/header-attrs.js"></script>
+  <link rel="stylesheet" href="styles.css" type="text/css" />
 
+<div id="TOC">
+<ul>
+<li><a href="#introduction" id="toc-introduction">Introduction</a></li>
+<li><a href="#becoming-acquainted-with-blastula" id="toc-becoming-acquainted-with-blastula">Becoming acquainted with <code>blastula</code></a></li>
+<li><a href="#customizing-an-email" id="toc-customizing-an-email">Customizing an email</a></li>
+<li><a href="#sending-emails" id="toc-sending-emails">Sending emails</a></li>
+</ul>
+</div>
 
 <div id="introduction" class="section level1">
 <h1>Introduction</h1>

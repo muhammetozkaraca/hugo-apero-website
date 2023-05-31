@@ -5,6 +5,12 @@ draft: false
 layout: single
 summary: "In this post, I show how to send autmated and customized emails in R using `blastula`." 
 date: "2021-11-05"
+output:
+  blogdown::html_page:
+    css: styles.css
+    toc: true
+    number_sections: false
+    toc_depth: 3
 ---
 
 ```{r setup, include=FALSE}
