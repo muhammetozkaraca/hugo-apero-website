@@ -1,0 +1,264 @@
+---
+title: "Conducting Multivariate Linear Regression Analysis with Global Terrorism Database (GTD)"
+subtitle: ""
+author: Muhammet Ozkaraca
+draft: false
+layout: single
+summary: "In this post, I will conduct a multivariate linear regression analysis using GTD and some World Bank Indicator data to cover the basics of the linear regression modelling and its premises." 
+date: "2023-06-01"
+output:
+  blogdown::html_page:
+    css: styles.css
+    toc: false
+    number_sections: false
+    toc_depth: 1
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introduction
+
+In a [previous post](https://muhammetozkaraca.com/blog/gtd-analysis-blog-part-1/), I have covered a basic data visualization task using the Global Terrorism Database (GTD) to illustrate the total number of terror events that occurred in each country between 1970 and 2020. Building upon that, this post will cover the fundamentals of linear regression analysis by incorporating the GTD data and various World Bank Indicators.
+
+To achieve this, I have compiled a dataset called **full_data(1990-2020)** by downloading, merging, and cleaning different World Bank Indicators alongside the number of terror events recorded in each country from the GTD data. While the dataset has a time range and it includes data between 1990 and 2020, the variables included in this dataset are as follows:
+
+- **country_txt**: Country name
+- **iyear**: Year^[Note that I have substituted one from the year columns across World Bank Indicators since, for example, the GDP per Capita for a given country in the year of 2020 is actually the GDP per Capita for the previous year.]
+- **count**: Number of terror events in a given year for the associated country based on the GTD.
+- **NY.GDP.PCAP.KD**: GDP per Capita (constant 2000 US$) for each country from 1970 to 2020
+- **SE.ADT.LITR.ZS** : Literacy rate for each country from 1970 to 2020, representing the percentage of adults aged 15 and above.
+- **SI.DST.10TH.10**: Income share (percentage) held by the highest 10% in each country from 1970 to 2020.
+- **SI.POV.GINI**: Gini index indicating income inequality for each country from 1970 to 2020^[Note that the I took the Gini index along with the `SI.DST.10TH.10` variable just for fun. Essentially, these two variables will do the same thing of measuring the impact of economic inequality on the occurrence of terror events. Therefore, I will not include both of them in the same regression model, but as can be seen later on, they can be used as substitute for each other.]
+- **MS.MIL.XPND.GD.ZS**: Military expenditure as a percentage of GDP for each country from 1970 to 2020. 
+
+Now, using the previously compiled dataset and the explained variables, we will begin by running a multivariate linear regression model. Subsequently, we will conduct an analysis on regression diagnostics to assess whether the models will adhere to the assumptions of linear regression. To start, let's install the necessary libraries and load the data into our environment.
+
+::::: {.panelset}
+::: {.panel}
+[Loading Package&Data]{.panel-name}
+```{r loading_packages_data, warning=FALSE, message=FALSE, echo=TRUE, class.source="codeBackground"}
+options(scipen=999) # to prevent scientific notation 
+library(tidyverse) # for data analysis purposes and visulization -> tidyverse mainly contains ggplot2 and dplyr
+library(corrplot) # for correlation analysis 
+full_data_1990_2020 <- read_csv("full_data(1990-2020).csv")
+```
+:::
+::: {.panel}
+[full_data_1990_2020]{.panel-name}
+```{r full_data_1990_2020, echo=FALSE, eval=TRUE, class.output="codeBackground"}
+head(full_data_1990_2020)
+```
+:::
+:::::
+
+
+# Running the Multivariate Regression Model
+
+After installing the libraries, let's proceed to run the model. Keep in mind that the primary question we seek to answer is the extent to which income, economic inequality, military strength, or education levels impact the occurrence of terror events, if at all. As such, `the main dependent variable` in this analysis will be the occurrence of terror events, while the remaining variables will be referred to as `independent variables`.
+
+::::: {.panelset}
+::: {.panel}
+[Regression Model]{.panel-name}
+```{r running_the_model, warning=FALSE, message=FALSE, echo=TRUE, class.source="codeBackground"}
+regression_model <- lm(count ~ NY.GDP.PCAP.KD + SE.ADT.LITR.ZS + SI.POV.GINI + MS.MIL.XPND.GD.ZS, 
+                       data = full_data_1990_2020)
+```
+:::
+::: {.panel}
+[Regression Results]{.panel-name}
+```{r running_the_model2, echo=FALSE, eval=TRUE, warning = FALSE, message = FALSE, class.output="codeBackground"}
+summary(regression_model)
+```
+:::
+:::::
+
+Based on the results, we can observe that three variables have statistically significant effects on the occurrence of terror events, as indicated by their p-values being less than 0.05, which is widely accepted as the threshold for determining statistical significance. Let's delve into each of these variables: 
+
+First, let's consider the variable representing the literacy rate (`SE.ADT.LITR.ZS`), which serves as a proxy for measuring the level of education within a given country. It becomes apparent that as literacy rates decrease, there is an increase in the frequency of terror attacks across countries. This relationship suggests that education levels may play a role in influencing the occurrence of such events.
+
+Secondly, and more intriguingly, a decrease in economic inequality (`SI.POV.GINI`) is associated with countries becoming more susceptible to terror attacks, as suggested by the results. This finding suggests that addressing income disparities within a country may have implications for mitigating the occurrence of terror events.
+
+Lastly, military expenditures (`MS.MIL.XPND.GD.ZS`) also exhibit a statistically significant impact on the occurrence of terror attacks. Surprisingly, there exists a counter intuitive inverse relationship, indicating that countries allocating a higher percentage of their GDP to military spending are more vulnerable to terror attacks. 
+
+In addition to these observations, there are three key concepts to consider from the regression table:
+
+- **R-squared**; it is a measure of the proportion of the total variation in the dependent variable that is explained by the independent variables in the regression model. It ranges from 0 to 1 and higher R-squared value indicates that a larger proportion of the variation in the dependent variable is accounted for by the predictors, which we strives to achieve. However, it should also be noted that R-squared does not consider the number of predictors in the model and *can be biased upwards as more predictors are added.* In our model, the R-squared score is 0.132. While it might low, bear in mind that, having a high R-squared score might not become a high practice. 
+
+- **Adjusted R-squared**; it a modified version of R-squared that takes into account the number of predictors in the model. *It penalizes the inclusion of unnecessary predictors, preventing overfitting and providing a more accurate assessment of the model's explanatory power*.^[While this does not have much importance at this point I believe, for further reference in case you might wonder, **Overfitting** occurs when a model fits the training data extremely well but performs poorly on new, unseen data. This might occur when a model is too complex or includes several predictors. And such models might be able to generalize well and may have poor predictive performance on new data.] Adjusted R-squared adjusts for the degrees of freedom and provides a more conservative estimate of the proportion of variation explained by the model. Like R-squared, the adjusted R-squared value ranges from 0 to 1, with a higher value indicating a better fit of the model to the data. In our model, the R-squared score is 0.1214 we can take it as a modest score, as explained above. 
+
+- **F-statistic**; assesses the overall significance or the joint effect of all the predictors in a regression model. It compares the variation explained by the model to the variation not explained by the model. *A higher F-statistic indicates a stronger relationship between the independent variables and the dependent variable*. If the F-statistic is significant (i.e., the associated p-value is below a chosen significance level), it suggests that the model as a whole is statistically significant in predicting the dependent variable. the F-statistic in our results equals to 12.47 and the p-value is lower than 0.05, which is the chosen significance level. Therefore, we can claim that the our results are statistically significant. 
+
+# Main Premises of the Linear Regression Test
+
+After running the regression model and seeing which variables in our data have a statistically significant impact on the occurrence of terror attacks, now let’s go through the main premises of the linear regression models and see whether the data we have satisfies them. To that end, the main assumptions of the linear regression analysis can be listed as;
+
+- Independence of Observations (Multicollinearity)
+- Normality
+- Linearity
+- Constant Variance (aka Homogeneity of Variance & Homoscedasticity)
+
+By assessing these assumptions, we can gain insights into the reliability and validity of our regression model and determine the extent to which it accurately captures the underlying relationships in the data.
+
+### Independence of Observations (Multicollinearity)
+
+Starting with the assumption of **multicollinearity**, linear regression tests assume that the independent variables in the model are not highly correlated with each other. If the independent variables used in the model exhibit strong correlations, it can introduce bias in the regression results. To evaluate this assumption, we will examine the degree of correlation among our independent variables by conducting a Pearson correlation test as outlined below.
+
+::::: {.panelset}
+::: {.panel}
+[Code]{.panel-name}
+```{r correlation_iv, warning=FALSE, message=FALSE, echo=TRUE, results = FALSE, class.source="codeBackground"}
+res <- cor(full_data_1990_2020[, 3:8], use = "pairwise.complete.obs") 
+```
+:::
+
+::: {.panel}
+[Correlation Table]{.panel-name}
+```{r correlation_iv2, echo=TRUE, eval=TRUE, class.output="codeBackground"}
+res
+```
+:::
+
+::: {.panel}
+[Correlation Plot]{.panel-name}
+```{r correlation_iv3, echo=TRUE, eval=TRUE, class.output="codeBackground"}
+plot(full_data_1990_2020[, 3:8])
+```
+:::
+:::::
+
+Before analyzing the correlation results, it is important to note that the given dataset contains numerous missing values (NA values). To calculate the correlation scores, we have used the `use = "pairwise.complete.obs"` argument, which considers only pairs of observations with complete data for all variables involved in the calculation. This means that if any variable has a missing value for a particular row, its correlation score will not be calculated, potentially leading to biased results. Therefore, it is crucial to exercise caution and acknowledge this limitation. Although this tutorial does not delve into the details, it is worth highlighting the importance of addressing this issue for accurate analysis.
+
+In the code provided above, we first calculate the correlation among the independent variables and store the results in the `res` variable. The second panel displays the results of the Pearson correlation tests in a tabular format, while the third panel presents a scatter plot illustrating the relationships among the variables.
+
+Based on the correlation scores, we can observe that the independent variables used in this analysis are generally not highly correlated with each other, except for `SI.POV.GINI` and `SI.DST.10TH.10`. These two variables can be considered as proxies for measuring economic inequality across countries, which explains their correlation. Consequently, they are not included simultaneously in the model to avoid multicollinearity. However, the correlation plot also reveals an interesting aspect related to the normality assumption, which will be further discussed.
+
+### Normality
+
+Continuing the discussion on the **normality** assumption, it posits that the residuals or errors of the regression model conform to a normal distribution.^[Here, the term "errors" or "residuals" refers to the discrepancies between observed values and predicted values.] It is important to note that the normality assumption specifically pertains to the residuals or errors, which represent the differences between the observed values and the predicted values obtained from the regression model. The assumption assumes that these errors adhere to a normal distribution with a mean of zero.
+
+To assess whether the residuals/errors significantly deviate from a normal distribution, we can perform the **Shapiro-Wilk test** and plot the residuals. The p-value resulting from the **Shapiro-Wilk test** provides evidence against the null hypothesis of normality. If the p-value is greater than the chosen significance level (0.05), it indicates that the residuals can be reasonably assumed to follow a normal distribution.
+
+
+::::: {.panelset}
+::: {.panel}
+[Quantile-Quantile (Q-Q) Plot]{.panel-name}
+```{r normality, warning=FALSE, message=FALSE, echo=TRUE, eval = TRUE, results = TRUE, class.source="codeBackground"}
+plot(regression_model, 2)
+```
+:::
+
+::: {.panel}
+[Shapiro-Wilk Test]{.panel-name}
+```{r normality2, echo=TRUE, eval=TRUE, class.output="codeBackground"}
+residuals <- resid(regression_model)
+shapiro.test(residuals)
+```
+:::
+:::::
+
+The QQ Plot clearly indicates that the points deviate noticeably from the reference line, indicating a departure from normality. This observation is further supported by the result of the Shapiro-Wilk Test. With a p-value below 0.05, the test provides sufficient evidence to reject the null hypothesis, suggesting that the data does not follow a normal distribution.
+
+### Linearity
+
+Following the **normality** assumption, the **linearity** premise states that there exists a linear relationship between the independent variables (predictors) and the dependent variable (response). This assumption suggests that a straight line can sufficiently represent the true relationship between these variables. Although the scatter plot above indicates a weak linear relationship between the main dependent variable and the independent variables, we can further visualize it by creating an additional scatter plot as shown below.
+
+
+::::: {.panelset}
+::: {.panel}
+[Code]{.panel-name}
+```{r linearity, warning=FALSE, message=FALSE, echo=TRUE, eval = FALSE, results = FALSE, class.source="codeBackground"}
+full_data_1990_2020 %>%
+  pivot_longer(NY.GDP.PCAP.KD:MS.MIL.XPND.GD.ZS, names_to = "variables", values_to = "values") %>%
+  ggplot() +
+  geom_point(aes(x = values, y = count)) +
+  facet_wrap(~variables, scales = "free_x") +
+  geom_smooth(aes(x = values, y = count), method = "lm") +
+  theme_bw()
+```
+:::
+
+::: {.panel}
+[Output]{.panel-name}
+```{r linearity2, echo=FALSE, eval=TRUE, warning = FALSE, message = FALSE,  class.output="codeBackground"}
+full_data_1990_2020 %>%
+  pivot_longer(NY.GDP.PCAP.KD:MS.MIL.XPND.GD.ZS, names_to = "variables", values_to = "values") %>%
+  ggplot() +
+  geom_point(aes(x = values, y = count)) +
+  facet_wrap(~variables, scales = "free_x") +
+  geom_smooth(aes(x = values, y = count), method = "lm") +
+  theme_bw()
+```
+:::
+
+:::::
+
+
+Additionally, the **linearity** assumption can also be checked via `Residuals vs. Fitted` plot. 
+
+::::: {.panelset}
+::: {.panel}
+[Code]{.panel-name}
+```{r linearity3, warning=FALSE, message=FALSE, echo=TRUE, eval = FALSE, results = FALSE, class.source="codeBackground"}
+plot(regression_model, 1)
+```
+:::
+
+::: {.panel}
+[Output]{.panel-name}
+```{r linearity4, echo=FALSE, eval=TRUE, warning = FALSE, message = FALSE,  class.output="codeBackground"}
+plot(regression_model, 1)
+```
+:::
+
+:::::
+
+The residuals plot should display a random pattern, with the reference line (shown in red) appearing approximately horizontal and centered around zero. If a noticeable pattern is observed in the plot, it may indicate problems with certain aspects of the linear model. In the provided plot, it is evident that the red line is not horizontal and not centered around zero, thus confirming the earlier observation that the **linearity** assumption is not valid in this scenario.
+
+
+### Constant Variance (aka Homogeneity of Variance & Homoscedasticity)
+
+Lastly and finally, we will look at whether the data we have satisfies the **homoscedasticity** assumption. According to that premise, the variability of the errors or residuals in a statistical model should be consistent across the range of the independent variables. To check that;
+
+
+::::: {.panelset}
+::: {.panel}
+[Code]{.panel-name}
+```{r homoscedasticity, warning=FALSE, message=FALSE, echo=TRUE, eval = FALSE, results = FALSE, class.source="codeBackground"}
+plot(regression_model, 3)
+```
+:::
+
+::: {.panel}
+[Output]{.panel-name}
+```{r homoscedasticity2, echo=FALSE, eval=TRUE, warning = FALSE, message = FALSE,  class.output="codeBackground"}
+plot(regression_model, 3)
+```
+:::
+
+:::::
+
+The plot illustrates whether the residuals are evenly distributed across the predictor ranges. Ideally, we would observe a horizontal line with points evenly scattered. However, in our specific example, this is not the case. We notice that the dispersion of the residual points increases as the value of the predicted outcome variable increases, indicating the presence of non-uniform variances in the residual errors, commonly known as heteroscedasticity.
+
+To conclude, in this tutorial, I have attempted to cover the fundamentals of multivariate linear regression. I hope this information is helpful, and I welcome your comments and suggestions.
+
+For further reference, you can refer to the following tutorials, which provide detailed explanations of the concepts discussed in this blog post:
+
+- [Linear Regression Assumptions and Diagnostics in R: Essentials](http://www.sthda.com/english/articles/39-regression-model-diagnostics/161-linear-regression-assumptions-and-diagnostics-in-r-essentials/#linearity-of-the-data)
+- [Pairwise-complete correlation considered dangerous](https://bwlewis.github.io/covar/missing.html)
+
+
+
+
+
+
+
+
+
+
+
+
+
+

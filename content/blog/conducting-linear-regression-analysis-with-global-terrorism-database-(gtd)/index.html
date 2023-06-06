@@ -1,0 +1,236 @@
+---
+title: "Conducting Multivariate Linear Regression Analysis with Global Terrorism Database (GTD)"
+subtitle: ""
+author: Muhammet Ozkaraca
+draft: false
+layout: single
+summary: "In this post, I will conduct a multivariate linear regression analysis using GTD and some World Bank Indicator data to cover the basics of the linear regression modelling and its premises." 
+date: "2023-06-01"
+output:
+  blogdown::html_page:
+    css: styles.css
+    toc: false
+    number_sections: false
+    toc_depth: 1
+---
+
+  <link rel="stylesheet" href="styles.css" type="text/css" />
+
+
+<div id="introduction" class="section level1">
+<h1>Introduction</h1>
+<p>In a <a href="https://muhammetozkaraca.com/blog/gtd-analysis-blog-part-1/">previous post</a>, I have covered a basic data visualization task using the Global Terrorism Database (GTD) to illustrate the total number of terror events that occurred in each country between 1970 and 2020. Building upon that, this post will cover the fundamentals of linear regression analysis by incorporating the GTD data and various World Bank Indicators.</p>
+<p>To achieve this, I have compiled a dataset called <strong>full_data(1990-2020)</strong> by downloading, merging, and cleaning different World Bank Indicators alongside the number of terror events recorded in each country from the GTD data. While the dataset has a time range and it includes data between 1990 and 2020, the variables included in this dataset are as follows:</p>
+<ul>
+<li><strong>country_txt</strong>: Country name</li>
+<li><strong>iyear</strong>: Year<a href="#fn1" class="footnote-ref" id="fnref1"><sup>1</sup></a></li>
+<li><strong>count</strong>: Number of terror events in a given year for the associated country based on the GTD.</li>
+<li><strong>NY.GDP.PCAP.KD</strong>: GDP per Capita (constant 2000 US$) for each country from 1970 to 2020</li>
+<li><strong>SE.ADT.LITR.ZS</strong> : Literacy rate for each country from 1970 to 2020, representing the percentage of adults aged 15 and above.</li>
+<li><strong>SI.DST.10TH.10</strong>: Income share (percentage) held by the highest 10% in each country from 1970 to 2020.</li>
+<li><strong>SI.POV.GINI</strong>: Gini index indicating income inequality for each country from 1970 to 2020<a href="#fn2" class="footnote-ref" id="fnref2"><sup>2</sup></a></li>
+<li><strong>MS.MIL.XPND.GD.ZS</strong>: Military expenditure as a percentage of GDP for each country from 1970 to 2020.</li>
+</ul>
+<p>Now, using the previously compiled dataset and the explained variables, we will begin by running a multivariate linear regression model. Subsequently, we will conduct an analysis on regression diagnostics to assess whether the models will adhere to the assumptions of linear regression. To start, let’s install the necessary libraries and load the data into our environment.</p>
+<div class="panelset">
+<div class="panel">
+<p><span class="panel-name">Loading Package&amp;Data</span></p>
+<pre class="r codeBackground"><code>options(scipen=999) # to prevent scientific notation 
+library(tidyverse) # for data analysis purposes and visulization -&gt; tidyverse mainly contains ggplot2 and dplyr
+library(corrplot) # for correlation analysis 
+full_data_1990_2020 &lt;- read_csv(&quot;full_data(1990-2020).csv&quot;)</code></pre>
+</div>
+<div class="panel">
+<p><span class="panel-name">full_data_1990_2020</span></p>
+<pre class="codeBackground"><code>## # A tibble: 6 × 8
+##   country_txt iyear count NY.GDP.PCAP.KD SE.ADT.LITR.ZS SI.DST.10TH.10
+##   &lt;chr&gt;       &lt;dbl&gt; &lt;dbl&gt;          &lt;dbl&gt;          &lt;dbl&gt;          &lt;dbl&gt;
+## 1 Afghanistan  1990     2             NA             NA             NA
+## 2 Afghanistan  1991    30             NA             NA             NA
+## 3 Afghanistan  1992    36             NA             NA             NA
+## 4 Afghanistan  1993     0             NA             NA             NA
+## 5 Afghanistan  1994     9             NA             NA             NA
+## 6 Afghanistan  1995     6             NA             NA             NA
+## # ℹ 2 more variables: SI.POV.GINI &lt;dbl&gt;, MS.MIL.XPND.GD.ZS &lt;dbl&gt;</code></pre>
+</div>
+</div>
+</div>
+<div id="running-the-multivariate-regression-model" class="section level1">
+<h1>Running the Multivariate Regression Model</h1>
+<p>After installing the libraries, let’s proceed to run the model. Keep in mind that the primary question we seek to answer is the extent to which income, economic inequality, military strength, or education levels impact the occurrence of terror events, if at all. As such, <code>the main dependent variable</code> in this analysis will be the occurrence of terror events, while the remaining variables will be referred to as <code>independent variables</code>.</p>
+<div class="panelset">
+<div class="panel">
+<p><span class="panel-name">Regression Model</span></p>
+<pre class="r codeBackground"><code>regression_model &lt;- lm(count ~ NY.GDP.PCAP.KD + SE.ADT.LITR.ZS + SI.POV.GINI + MS.MIL.XPND.GD.ZS, 
+                       data = full_data_1990_2020)</code></pre>
+</div>
+<div class="panel">
+<p><span class="panel-name">Regression Results</span></p>
+<pre class="codeBackground"><code>## 
+## Call:
+## lm(formula = count ~ NY.GDP.PCAP.KD + SE.ADT.LITR.ZS + SI.POV.GINI + 
+##     MS.MIL.XPND.GD.ZS, data = full_data_1990_2020)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -245.41  -54.43  -24.40   14.14 1426.65 
+## 
+## Coefficients:
+##                     Estimate Std. Error t value   Pr(&gt;|t|)    
+## (Intercept)       282.849161  67.995459   4.160 0.00004072 ***
+## NY.GDP.PCAP.KD     -0.002014   0.001466  -1.374    0.17046    
+## SE.ADT.LITR.ZS     -1.588974   0.639806  -2.484    0.01351 *  
+## SI.POV.GINI        -3.525233   1.128189  -3.125    0.00194 ** 
+## MS.MIL.XPND.GD.ZS  40.408006   8.991684   4.494 0.00000971 ***
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## Residual standard error: 153.6 on 328 degrees of freedom
+##   (5805 observations deleted due to missingness)
+## Multiple R-squared:  0.132,  Adjusted R-squared:  0.1214 
+## F-statistic: 12.47 on 4 and 328 DF,  p-value: 0.000000001873</code></pre>
+</div>
+</div>
+<p>Based on the results, we can observe that three variables have statistically significant effects on the occurrence of terror events, as indicated by their p-values being less than 0.05, which is widely accepted as the threshold for determining statistical significance. Let’s delve into each of these variables:</p>
+<p>First, let’s consider the variable representing the literacy rate (<code>SE.ADT.LITR.ZS</code>), which serves as a proxy for measuring the level of education within a given country. It becomes apparent that as literacy rates decrease, there is an increase in the frequency of terror attacks across countries. This relationship suggests that education levels may play a role in influencing the occurrence of such events.</p>
+<p>Secondly, and more intriguingly, a decrease in economic inequality (<code>SI.POV.GINI</code>) is associated with countries becoming more susceptible to terror attacks, as suggested by the results. This finding suggests that addressing income disparities within a country may have implications for mitigating the occurrence of terror events.</p>
+<p>Lastly, military expenditures (<code>MS.MIL.XPND.GD.ZS</code>) also exhibit a statistically significant impact on the occurrence of terror attacks. Surprisingly, there exists a counter intuitive inverse relationship, indicating that countries allocating a higher percentage of their GDP to military spending are more vulnerable to terror attacks.</p>
+<p>In addition to these observations, there are three key concepts to consider from the regression table:</p>
+<ul>
+<li><p><strong>R-squared</strong>; it is a measure of the proportion of the total variation in the dependent variable that is explained by the independent variables in the regression model. It ranges from 0 to 1 and higher R-squared value indicates that a larger proportion of the variation in the dependent variable is accounted for by the predictors, which we strives to achieve. However, it should also be noted that R-squared does not consider the number of predictors in the model and <em>can be biased upwards as more predictors are added.</em> In our model, the R-squared score is 0.132. While it might low, bear in mind that, having a high R-squared score might not become a high practice.</p></li>
+<li><p><strong>Adjusted R-squared</strong>; it a modified version of R-squared that takes into account the number of predictors in the model. <em>It penalizes the inclusion of unnecessary predictors, preventing overfitting and providing a more accurate assessment of the model’s explanatory power</em>.<a href="#fn3" class="footnote-ref" id="fnref3"><sup>3</sup></a> Adjusted R-squared adjusts for the degrees of freedom and provides a more conservative estimate of the proportion of variation explained by the model. Like R-squared, the adjusted R-squared value ranges from 0 to 1, with a higher value indicating a better fit of the model to the data. In our model, the R-squared score is 0.1214 we can take it as a modest score, as explained above.</p></li>
+<li><p><strong>F-statistic</strong>; assesses the overall significance or the joint effect of all the predictors in a regression model. It compares the variation explained by the model to the variation not explained by the model. <em>A higher F-statistic indicates a stronger relationship between the independent variables and the dependent variable</em>. If the F-statistic is significant (i.e., the associated p-value is below a chosen significance level), it suggests that the model as a whole is statistically significant in predicting the dependent variable. the F-statistic in our results equals to 12.47 and the p-value is lower than 0.05, which is the chosen significance level. Therefore, we can claim that the our results are statistically significant.</p></li>
+</ul>
+</div>
+<div id="main-premises-of-the-linear-regression-test" class="section level1">
+<h1>Main Premises of the Linear Regression Test</h1>
+<p>After running the regression model and seeing which variables in our data have a statistically significant impact on the occurrence of terror attacks, now let’s go through the main premises of the linear regression models and see whether the data we have satisfies them. To that end, the main assumptions of the linear regression analysis can be listed as;</p>
+<ul>
+<li>Independence of Observations (Multicollinearity)</li>
+<li>Normality</li>
+<li>Linearity</li>
+<li>Constant Variance (aka Homogeneity of Variance &amp; Homoscedasticity)</li>
+</ul>
+<p>By assessing these assumptions, we can gain insights into the reliability and validity of our regression model and determine the extent to which it accurately captures the underlying relationships in the data.</p>
+<div id="independence-of-observations-multicollinearity" class="section level3">
+<h3>Independence of Observations (Multicollinearity)</h3>
+<p>Starting with the assumption of <strong>multicollinearity</strong>, linear regression tests assume that the independent variables in the model are not highly correlated with each other. If the independent variables used in the model exhibit strong correlations, it can introduce bias in the regression results. To evaluate this assumption, we will examine the degree of correlation among our independent variables by conducting a Pearson correlation test as outlined below.</p>
+<div class="panelset">
+<div class="panel">
+<p><span class="panel-name">Code</span></p>
+<pre class="r codeBackground"><code>res &lt;- cor(full_data_1990_2020[, 3:8], use = &quot;pairwise.complete.obs&quot;) </code></pre>
+</div>
+<div class="panel">
+<p><span class="panel-name">Correlation Table</span></p>
+<pre class="r"><code>res</code></pre>
+<pre class="codeBackground"><code>##                         count NY.GDP.PCAP.KD SE.ADT.LITR.ZS SI.DST.10TH.10
+## count              1.00000000    -0.07937814    -0.08727745     0.00876993
+## NY.GDP.PCAP.KD    -0.07937814     1.00000000     0.36949083    -0.44980979
+## SE.ADT.LITR.ZS    -0.08727745     0.36949083     1.00000000     0.00506818
+## SI.DST.10TH.10     0.00876993    -0.44980979     0.00506818     1.00000000
+## SI.POV.GINI       -0.01465897    -0.44327102     0.07528497     0.98144096
+## MS.MIL.XPND.GD.ZS  0.02927558    -0.03011620    -0.03582229     0.05563702
+##                   SI.POV.GINI MS.MIL.XPND.GD.ZS
+## count             -0.01465897        0.02927558
+## NY.GDP.PCAP.KD    -0.44327102       -0.03011620
+## SE.ADT.LITR.ZS     0.07528497       -0.03582229
+## SI.DST.10TH.10     0.98144096        0.05563702
+## SI.POV.GINI        1.00000000        0.06716484
+## MS.MIL.XPND.GD.ZS  0.06716484        1.00000000</code></pre>
+</div>
+<div class="panel">
+<p><span class="panel-name">Correlation Plot</span></p>
+<pre class="r"><code>plot(full_data_1990_2020[, 3:8])</code></pre>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/correlation_iv3-1.png" width="672" /></p>
+</div>
+</div>
+<p>Before analyzing the correlation results, it is important to note that the given dataset contains numerous missing values (NA values). To calculate the correlation scores, we have used the <code>use = "pairwise.complete.obs"</code> argument, which considers only pairs of observations with complete data for all variables involved in the calculation. This means that if any variable has a missing value for a particular row, its correlation score will not be calculated, potentially leading to biased results. Therefore, it is crucial to exercise caution and acknowledge this limitation. Although this tutorial does not delve into the details, it is worth highlighting the importance of addressing this issue for accurate analysis.</p>
+<p>In the code provided above, we first calculate the correlation among the independent variables and store the results in the <code>res</code> variable. The second panel displays the results of the Pearson correlation tests in a tabular format, while the third panel presents a scatter plot illustrating the relationships among the variables.</p>
+<p>Based on the correlation scores, we can observe that the independent variables used in this analysis are generally not highly correlated with each other, except for <code>SI.POV.GINI</code> and <code>SI.DST.10TH.10</code>. These two variables can be considered as proxies for measuring economic inequality across countries, which explains their correlation. Consequently, they are not included simultaneously in the model to avoid multicollinearity. However, the correlation plot also reveals an interesting aspect related to the normality assumption, which will be further discussed.</p>
+</div>
+<div id="normality" class="section level3">
+<h3>Normality</h3>
+<p>Continuing the discussion on the <strong>normality</strong> assumption, it posits that the residuals or errors of the regression model conform to a normal distribution.<a href="#fn4" class="footnote-ref" id="fnref4"><sup>4</sup></a> It is important to note that the normality assumption specifically pertains to the residuals or errors, which represent the differences between the observed values and the predicted values obtained from the regression model. The assumption assumes that these errors adhere to a normal distribution with a mean of zero.</p>
+<p>To assess whether the residuals/errors significantly deviate from a normal distribution, we can perform the <strong>Shapiro-Wilk test</strong> and plot the residuals. The p-value resulting from the <strong>Shapiro-Wilk test</strong> provides evidence against the null hypothesis of normality. If the p-value is greater than the chosen significance level (0.05), it indicates that the residuals can be reasonably assumed to follow a normal distribution.</p>
+<div class="panelset">
+<div class="panel">
+<p><span class="panel-name">Quantile-Quantile (Q-Q) Plot</span></p>
+<pre class="r codeBackground"><code>plot(regression_model, 2)</code></pre>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/normality-1.png" width="672" /></p>
+</div>
+<div class="panel">
+<p><span class="panel-name">Shapiro-Wilk Test</span></p>
+<pre class="r"><code>residuals &lt;- resid(regression_model)
+shapiro.test(residuals)</code></pre>
+<pre class="codeBackground"><code>## 
+##  Shapiro-Wilk normality test
+## 
+## data:  residuals
+## W = 0.53805, p-value &lt; 0.00000000000000022</code></pre>
+</div>
+</div>
+<p>The QQ Plot clearly indicates that the points deviate noticeably from the reference line, indicating a departure from normality. This observation is further supported by the result of the Shapiro-Wilk Test. With a p-value below 0.05, the test provides sufficient evidence to reject the null hypothesis, suggesting that the data does not follow a normal distribution.</p>
+</div>
+<div id="linearity" class="section level3">
+<h3>Linearity</h3>
+<p>Following the <strong>normality</strong> assumption, the <strong>linearity</strong> premise states that there exists a linear relationship between the independent variables (predictors) and the dependent variable (response). This assumption suggests that a straight line can sufficiently represent the true relationship between these variables. Although the scatter plot above indicates a weak linear relationship between the main dependent variable and the independent variables, we can further visualize it by creating an additional scatter plot as shown below.</p>
+<div class="panelset">
+<div class="panel">
+<p><span class="panel-name">Code</span></p>
+<pre class="r codeBackground"><code>full_data_1990_2020 %&gt;%
+  pivot_longer(NY.GDP.PCAP.KD:MS.MIL.XPND.GD.ZS, names_to = &quot;variables&quot;, values_to = &quot;values&quot;) %&gt;%
+  ggplot() +
+  geom_point(aes(x = values, y = count)) +
+  facet_wrap(~variables, scales = &quot;free_x&quot;) +
+  geom_smooth(aes(x = values, y = count), method = &quot;lm&quot;) +
+  theme_bw()</code></pre>
+</div>
+<div class="panel">
+<p><span class="panel-name">Output</span>
+<img src="{{< blogdown/postref >}}index_files/figure-html/linearity2-1.png" width="672" /></p>
+</div>
+</div>
+<p>Additionally, the <strong>linearity</strong> assumption can also be checked via <code>Residuals vs. Fitted</code> plot.</p>
+<div class="panelset">
+<div class="panel">
+<p><span class="panel-name">Code</span></p>
+<pre class="r codeBackground"><code>plot(regression_model, 1)</code></pre>
+</div>
+<div class="panel">
+<p><span class="panel-name">Output</span>
+<img src="{{< blogdown/postref >}}index_files/figure-html/linearity4-1.png" width="672" /></p>
+</div>
+</div>
+<p>The residuals plot should display a random pattern, with the reference line (shown in red) appearing approximately horizontal and centered around zero. If a noticeable pattern is observed in the plot, it may indicate problems with certain aspects of the linear model. In the provided plot, it is evident that the red line is not horizontal and not centered around zero, thus confirming the earlier observation that the <strong>linearity</strong> assumption is not valid in this scenario.</p>
+</div>
+<div id="constant-variance-aka-homogeneity-of-variance-homoscedasticity" class="section level3">
+<h3>Constant Variance (aka Homogeneity of Variance &amp; Homoscedasticity)</h3>
+<p>Lastly and finally, we will look at whether the data we have satisfies the <strong>homoscedasticity</strong> assumption. According to that premise, the variability of the errors or residuals in a statistical model should be consistent across the range of the independent variables. To check that;</p>
+<div class="panelset">
+<div class="panel">
+<p><span class="panel-name">Code</span></p>
+<pre class="r codeBackground"><code>plot(regression_model, 3)</code></pre>
+</div>
+<div class="panel">
+<p><span class="panel-name">Output</span>
+<img src="{{< blogdown/postref >}}index_files/figure-html/homoscedasticity2-1.png" width="672" /></p>
+</div>
+</div>
+<p>The plot illustrates whether the residuals are evenly distributed across the predictor ranges. Ideally, we would observe a horizontal line with points evenly scattered. However, in our specific example, this is not the case. We notice that the dispersion of the residual points increases as the value of the predicted outcome variable increases, indicating the presence of non-uniform variances in the residual errors, commonly known as heteroscedasticity.</p>
+<p>To conclude, in this tutorial, I have attempted to cover the fundamentals of multivariate linear regression. I hope this information is helpful, and I welcome your comments and suggestions.</p>
+<p>For further reference, you can refer to the following tutorials, which provide detailed explanations of the concepts discussed in this blog post:</p>
+<ul>
+<li><a href="http://www.sthda.com/english/articles/39-regression-model-diagnostics/161-linear-regression-assumptions-and-diagnostics-in-r-essentials/#linearity-of-the-data">Linear Regression Assumptions and Diagnostics in R: Essentials</a></li>
+<li><a href="https://bwlewis.github.io/covar/missing.html">Pairwise-complete correlation considered dangerous</a></li>
+</ul>
+</div>
+</div>
+<div class="footnotes footnotes-end-of-document">
+<hr />
+<ol>
+<li id="fn1"><p>Note that I have substituted one from the year columns across World Bank Indicators since, for example, the GDP per Capita for a given country in the year of 2020 is actually the GDP per Capita for the previous year.<a href="#fnref1" class="footnote-back">↩︎</a></p></li>
+<li id="fn2"><p>Note that the I took the Gini index along with the <code>SI.DST.10TH.10</code> variable just for fun. Essentially, these two variables will do the same thing of measuring the impact of economic inequality on the occurrence of terror events. Therefore, I will not include both of them in the same regression model, but as can be seen later on, they can be used as substitute for each other.<a href="#fnref2" class="footnote-back">↩︎</a></p></li>
+<li id="fn3"><p>While this does not have much importance at this point I believe, for further reference in case you might wonder, <strong>Overfitting</strong> occurs when a model fits the training data extremely well but performs poorly on new, unseen data. This might occur when a model is too complex or includes several predictors. And such models might be able to generalize well and may have poor predictive performance on new data.<a href="#fnref3" class="footnote-back">↩︎</a></p></li>
+<li id="fn4"><p>Here, the term “errors” or “residuals” refers to the discrepancies between observed values and predicted values.<a href="#fnref4" class="footnote-back">↩︎</a></p></li>
+</ol>
+</div>
