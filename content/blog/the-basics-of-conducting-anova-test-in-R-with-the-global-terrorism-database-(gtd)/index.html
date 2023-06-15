@@ -4,7 +4,7 @@ subtitle: ""
 author: Muhammet Ozkaraca
 draft: false
 layout: single
-summary: "In this post, I will conduct one-way & two-way ANOVA in R along with its main premises and post-hoc tests to cover the basics." 
+summary: "In this post, I will conduct an ANOVA test in R along with covering its main premises." 
 date: "2023-06-14"
 output:
   blogdown::html_page:
@@ -141,7 +141,7 @@ Hypothesis (<span class="math inline">\(H_{0}\)</span>) and therefore this crite
 </div>
 <div id="conducting-anova-test-in-r" class="section level1">
 <h1>Conducting ANOVA test in R</h1>
-<p>In this section, we will conduct a ANOVA test based on a real-world example. To that end, let’s start running the ANOVA test first and then see whether it satisfies the main assumptions.</p>
+<p>In this section, we will conduct an ANOVA test based on a real-world example. To that end, let’s start running the ANOVA test first and then see whether it satisfies the main assumptions.</p>
 <div class="panelset">
 <div class="panel">
 <p><span class="panel-name">ANOVA Test</span></p>
@@ -243,7 +243,7 @@ leveneTest(count ~ economic_inequality, data = full_data_1990_2020)</code></pre>
 </div>
 </div>
 <p>Beginning with the histogram, it is evident that the variances within each group are high due to the right-skewed distribution of the number of terror events. Upon examining the dot plot, it becomes apparent that the variances within each group also exhibit a considerable variation. To statistically test this using Levene’s test in the third panel, the resulting <span class="math inline">\(p-value\)</span> is found to be lower than 0.05, indicating <u><strong>sufficient evidence to reject the null hypothesis (<span class="math inline">\(H_{0}\)</span>) that the variances are equal across groups.</u></strong></p>
-<p>To wrap up, in this tutorials, we go over the basics of Analysis of Variance (ANOVA) test in R along with covering its main assumptions. I hope that this was helpful and for further reference, you can refer to the following tutorials, which provide detailed explanations of the concepts discussed in this blog post:</p>
+<p>To wrap up, in this tutorial, we covered the basics of Analysis of Variance (ANOVA) test in R along with mentioning its main assumptions. I hope that this was helpful and for further reference, you can refer to the following tutorials, which provide detailed explanations of the concepts discussed in this blog post:</p>
 <ul>
 <li><a href="https://statsandr.com/blog/anova-in-r/">ANOVA in R</a></li>
 <li><a href="https://www.statmethods.net/stats/anova.html">ANOVA</a></li>
