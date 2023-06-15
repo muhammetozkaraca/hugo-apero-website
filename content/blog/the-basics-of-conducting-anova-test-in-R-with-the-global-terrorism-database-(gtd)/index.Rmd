@@ -4,7 +4,7 @@ subtitle: ""
 author: Muhammet Ozkaraca
 draft: false
 layout: single
-summary: "In this post, I will conduct an ANOVA in R along with covering its main premises." 
+summary: "In this post, I will conduct an ANOVA test in R along with covering its main premises." 
 date: "2023-06-14"
 output:
   blogdown::html_page:
