@@ -1,0 +1,260 @@
+---
+title: "The Basics of Conducting ANOVA Test in R with the Global Terrorism Database (GTD)"
+subtitle: ""
+author: Muhammet Ozkaraca
+draft: false
+layout: single
+summary: "In this post, I will conduct one-way & two-way ANOVA in R along with its main premises and post-hoc tests to cover the basics." 
+date: "2023-06-14"
+output:
+  blogdown::html_page:
+    css: styles.css
+    toc: yes
+    number_sections: false
+    toc_depth: 3
+---
+
+  <link rel="stylesheet" href="styles.css" type="text/css" />
+
+<div id="TOC">
+<ul>
+<li><a href="#a-gentle-introduction-to-anova" id="toc-a-gentle-introduction-to-anova">A Gentle Introduction to ANOVA</a></li>
+<li><a href="#main-premises-of-analysis-of-variance-anova" id="toc-main-premises-of-analysis-of-variance-anova">Main Premises of Analysis of Variance (ANOVA)</a>
+<ul>
+<li><a href="#variable-type" id="toc-variable-type">Variable Type</a></li>
+<li><a href="#independence" id="toc-independence">Independence</a></li>
+<li><a href="#normality" id="toc-normality">Normality</a></li>
+<li><a href="#equality-of-variances-homogeneity" id="toc-equality-of-variances-homogeneity">Equality of Variances (Homogeneity)</a></li>
+</ul></li>
+<li><a href="#conducting-anova-test-in-r" id="toc-conducting-anova-test-in-r">Conducting ANOVA test in R</a></li>
+</ul>
+</div>
+
+<p>In a <a href="https://muhammetozkaraca.com/blog/conducting-linear-regression-analysis-with-global-terrorism-database-gtd/">previous post</a>, we have covered the main premises of conducting a multivariate linear regression test in R with the GTD along with its main diagnostics. For this tutorial, we will be focusing on how to conduct an Analysis of Variance (ANOVA) test in R. For this purpose, we will be using the same dataset, <strong>full_data(1990-2020)</strong>, we have used for the last tutorial. To recall what the dataset was about, it includes different World Bank Indicators alongside the number of terror events recorded in each country from the GTD data. While the dataset has a time range, having data between 1990 and 2020, the variables included in this dataset are as follows:</p>
+<ul>
+<li><strong>country_txt</strong>: Country name</li>
+<li><strong>iyear</strong>: Year<a href="#fn1" class="footnote-ref" id="fnref1"><sup>1</sup></a></li>
+<li><strong>count</strong>: Number of terror events in a given year for the associated country based on the GTD.</li>
+<li><strong>NY.GDP.PCAP.KD</strong>: GDP per Capita (constant 2000 US$) for each country from 1970 to 2020</li>
+<li><strong>SE.ADT.LITR.ZS</strong> : Literacy rate for each country from 1970 to 2020, representing the percentage of adults aged 15 and above.</li>
+<li><strong>SI.DST.10TH.10</strong>: Income share (percentage) held by the highest 10% in each country from 1970 to 2020.</li>
+<li><strong>SI.POV.GINI</strong>: Gini index indicating income inequality for each country from 1970 to 2020<a href="#fn2" class="footnote-ref" id="fnref2"><sup>2</sup></a></li>
+<li><strong>MS.MIL.XPND.GD.ZS</strong>: Military expenditure as a percentage of GDP for each country from 1970 to 2020.</li>
+</ul>
+<p>We will first go over the basics of the ANOVA, followed by a brief definition for its main assumptions. In 3<sup>rd</sup> part, a real world data will be used to conduct the ANOVA test with the given information.</p>
+<div class="panelset">
+<div class="panel">
+<p><span class="panel-name">Loading Package&amp;Data</span></p>
+<pre class="r codeBackground"><code>options(scipen=999) # to prevent scientific notation 
+library(tidyverse) # for data analysis purposes and visulization -&gt; tidyverse mainly contains ggplot2 and dplyr
+
+
+full_data_1990_2020 &lt;- read_csv(&quot;full_data(1990-2020).csv&quot;)
+
+full_data_1990_2020 &lt;- full_data_1990_2020 %&gt;%
+  na.omit(SI.POV.GINI) %&gt;%
+  mutate(economic_inequality= case_when (SI.POV.GINI &gt;= 45 ~ &quot;High Inequality&quot;,
+                                          SI.POV.GINI &gt;= 30 &amp; SI.POV.GINI &lt; 45 ~ &quot;Medium Inequality&quot;,
+                                          SI.POV.GINI &lt; 30 ~ &quot;Low Inequality&quot;))</code></pre>
+</div>
+<div class="panel">
+<p><span class="panel-name">full_data_1990_2020</span></p>
+<pre class="codeBackground"><code>## # A tibble: 6 × 9
+##   country_txt iyear count NY.GDP.PCAP.KD SE.ADT.LITR.ZS SI.DST.10TH.10
+##   &lt;chr&gt;       &lt;dbl&gt; &lt;dbl&gt;          &lt;dbl&gt;          &lt;dbl&gt;          &lt;dbl&gt;
+## 1 Albania      2007     0          3298.           95.9           24.5
+## 2 Albania      2011     0          3736.           97.2           22.9
+## 3 Albania      2017     1          4432.           98.1           22.7
+## 4 Argentina    1990    31          8763.           96.0           36.6
+## 5 Argentina    2000     0         10091.           97.2           39.5
+## 6 Argentina    2005     3         11914.           98.6           33.7
+## # ℹ 3 more variables: SI.POV.GINI &lt;dbl&gt;, MS.MIL.XPND.GD.ZS &lt;dbl&gt;,
+## #   economic_inequality &lt;chr&gt;</code></pre>
+</div>
+</div>
+<div id="a-gentle-introduction-to-anova" class="section level1">
+<h1>A Gentle Introduction to ANOVA</h1>
+<p>Analysis of Variance (ANOVA) tests are used to determine whether there is a difference in the means of the groups at each level of the independent variable. In other words, ANOVA estimates how a quantitative dependent variable changes according to the levels of one or more categorical independent variables.<a href="#fn3" class="footnote-ref" id="fnref3"><sup>3</sup></a> To make it more concrete with the dataset we have, the <strong>dependent variable</strong> in our context is the <code>number of terror events occured across countries between 1990-2020</code> and the <strong>independent variable</strong> is <code>economic inequality</code>. Therefore we would like to see whether there is a statistically significant difference across countries having High/Medium/Low economic inequality in terms of the number of terror events they experienced. Accordingly, the hypothesis for our analysis will be;</p>
+<ul>
+<li><u>Null Hypothesis</u>(<span class="math inline">\(H_{0}\)</span>): Countries, having high/medium/low economic inequality, <u><strong>are equal</strong></u> in terms of the number of terror events occurred.
+<ul>
+<li><span class="math inline">\(\mu_{High Economic Ineqaulity}\)</span> = <span class="math inline">\(\mu_{Medium Economic Ineqaulity}\)</span> = <span class="math inline">\(\mu_{Low Economic Ineqaulity}\)</span></li>
+</ul></li>
+<li><u>Alternative Hypothesis</u>(<span class="math inline">\(H_{1}\)</span>): <u><strong>At least one type of country is statistically different from others</strong></u> in terms of the number of terror events occurred.</li>
+</ul>
+</div>
+<div id="main-premises-of-analysis-of-variance-anova" class="section level1">
+<h1>Main Premises of Analysis of Variance (ANOVA)</h1>
+<p>As in the case of multivariate regression tests covered in the <a href="https://muhammetozkaraca.com/blog/conducting-linear-regression-analysis-with-global-terrorism-database-gtd/">previous post</a>, ANOVA tests have also 4 main assumptions. They can be listed as;</p>
+<ol style="list-style-type: decimal">
+<li><span style="color:red; font-weight: bold;">Variable Type</span></li>
+<li><span style="color:red; font-weight: bold;">Independence</span></li>
+<li><span style="color:red; font-weight: bold;">Normality</span></li>
+<li><span style="color:red; font-weight: bold;">Equality of Variances (Homogeneity)</span></li>
+</ol>
+<div id="variable-type" class="section level2">
+<h2>Variable Type</h2>
+<p>For ANOVA tests, it is necessary <u>to have a single continuous quantitative dependent variable (DV)</u> and <u>a qualitative independent variable (IV) with a minimum of two levels</u>. The IV will determine the groups that will be compared.</p>
+</div>
+<div id="independence" class="section level2">
+<h2>Independence</h2>
+<p>ANOVA tests require that <u>the observations within each group are independent of each other</u>, and this condition can be verified based on the study design. However, a further test, <strong>Durbin-Watson test</strong>, can be used to assess whether this assumption is satisfied or not in case needed.</p>
+</div>
+<div id="normality" class="section level2">
+<h2>Normality</h2>
+<p>ANOVA tests requires the distribution of the residuals (the differences between the observed values and the predicted values) to be normal. In other words, the residuals should be normally distributed around zero and <u><em>as a rule of thumb, for large sample sizes, normality is assumed to be satisfied</em></u>. In this regard, there are three ways to check whether this assumption is met.</p>
+<div class="sidenote">
+<strong>If normality is not met, the non-parametric test, Kruskal Wallis, should be used instead of ANOVA</strong> to see at least one group is statistically different from others.
+</div>
+<ol style="list-style-type: lower-roman">
+<li><strong>Via visual depiction</strong> -&gt; using Histogram and/or Quantile-Quantile Plot (QQ Plot)</li>
+<li><strong>Via statistical testing</strong> -&gt; using shapiro.test
+<ul>
+<li>the Null Hypothesis (<span class="math inline">\(H_{0}\)</span>) will be data come from normal distribution, while the alternative hypothesis
+(<span class="math inline">\(H_{1}\)</span>) will be data do not come from normal distribution.</li>
+<li>In this scenario, having <span class="math inline">\(p-value&gt;0.05\)</span> will demonstrate that there is not enough evidence to reject the Null
+Hypothesis (<span class="math inline">\(H_{0}\)</span>) and therefore this criterion is met.</li>
+</ul></li>
+<li><strong>Both</strong></li>
+</ol>
+</div>
+<div id="equality-of-variances-homogeneity" class="section level2">
+<h2>Equality of Variances (Homogeneity)</h2>
+<p>For this premise of the ANOVA test, the variances of the groups should be equal. 3 ways exist to check that assumption;</p>
+<ol style="list-style-type: lower-roman">
+<li><strong>Via visual depiction</strong> -&gt; using Histogram and/or Dot Plot and/or Scale-Location plot from <code>plot()</code> in R.</li>
+<li><strong>Via statistical testing</strong> -&gt; using Levene’s test and others such as Barlett’s test and etc.
+<ul>
+<li>the Null Hypothesis (<span class="math inline">\(H_{0}\)</span>) is variances within groups are equal, while the alternative hypothesis
+(<span class="math inline">\(H_{1}\)</span>) is variances within groups are not equal.</li>
+<li>In this scenario, having <span class="math inline">\(p-value&gt;0.05\)</span> will demonstrate that there is not enough evidence to reject the Null
+Hypothesis (<span class="math inline">\(H_{0}\)</span>) and therefore this criterion is met.</li>
+</ul></li>
+<li><strong>Both</strong></li>
+</ol>
+<div class="sidenote">
+<strong>If Equality of Variances is not met, Welch ANOVA test should be used</strong>
+</div>
+<p>To sum up, the following figure might help which test to be used based on the specific features of the data.</p>
+<p><img src="assumptions_summary.png" width="788" /></p>
+</div>
+</div>
+<div id="conducting-anova-test-in-r" class="section level1">
+<h1>Conducting ANOVA test in R</h1>
+<p>In this section, we will conduct a ANOVA test based on a real-world example. To that end, let’s start running the ANOVA test first and then see whether it satisfies the main assumptions.</p>
+<div class="panelset">
+<div class="panel">
+<p><span class="panel-name">ANOVA Test</span></p>
+<pre class="r codeBackground"><code>anova_model &lt;- aov(count~ economic_inequality, data = full_data_1990_2020)</code></pre>
+</div>
+<div class="panel">
+<p><span class="panel-name">Results</span></p>
+<pre class="codeBackground"><code>##                      Df  Sum Sq Mean Sq F value     Pr(&gt;F)    
+## economic_inequality   2  627703  313851    12.5 0.00000584 ***
+## Residuals           330 8284369   25104                       
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</code></pre>
+</div>
+</div>
+<p>From the results, it can be seen that <span class="math inline">\(p-value&lt;0.05\)</span>, meaning that <strong><u>there is enough evidence to reject the Null Hypothesis (<span class="math inline">\(H_{0}\)</span>) that there is no difference among groups (High/Medium/Low Economic Ineqaulity) with regards to the occurence of terror attacks</u></strong>. In other words, we can claim that <em>there is statistically significant evidence that at least one group has a difference in terms of the number of terror attacks they exposed to.</em></p>
+<p>Now, let’s quickly go over the main assumptions and see whether the data we have to conduct the ANOVA meet them or not.</p>
+<div id="variable-type-1" class="section level4">
+<h4>Variable Type</h4>
+<p>Variable type fits to the description mentioned above. Particularly, we do have a single continuous quantitative dependent variable (DV)</u> and <u>a qualitative independent variable (IV) with a minimum of two levels</u></p>
+</div>
+<div id="independence-1" class="section level4">
+<h4>Independence</h4>
+<p>It can be claimed that the events are independent from the each other due to the study design we follow. One occurence is not influenced by another one.</p>
+</div>
+<div id="normality-1" class="section level4">
+<h4>Normality</h4>
+<p>As mentioned previously there are three ways to check normality of the ANOVA assumption. To recall them quickly, they are;</p>
+<ol style="list-style-type: lower-roman">
+<li>visually - Histogram &amp; QQ Plot</li>
+<li>statistically - via Shapiro Test</li>
+<li>both</li>
+</ol>
+<p>Now, let go over them in the following panel.</p>
+<div class="panelset">
+<div class="panel">
+<p><span class="panel-name">Histogram</span></p>
+<pre class="r codeBackground"><code>hist(full_data_1990_2020$count)</code></pre>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/hist-1.png" width="672" /></p>
+</div>
+<div class="panel">
+<p><span class="panel-name">QQ Plot</span></p>
+<pre class="r"><code>qqnorm(resid(anova_model))
+qqline(resid(anova_model))</code></pre>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/qq_plot-1.png" width="672" /></p>
+</div>
+<div class="panel">
+<p><span class="panel-name">Shapiro Test</span></p>
+<pre class="r"><code>shapiro.test(full_data_1990_2020$count)</code></pre>
+<pre class="codeBackground"><code>## 
+##  Shapiro-Wilk normality test
+## 
+## data:  full_data_1990_2020$count
+## W = 0.31233, p-value &lt; 0.00000000000000022</code></pre>
+</div>
+</div>
+<p>From the initial two panels, <em>it is evident that our data does not exhibit a normal distribution</em>. Both the histogram and quantile-quantile (QQ) plot, which showcase the distribution of residuals, deviate from a normal distribution. This observation is further confirmed by conducting the Shapiro test in the third panel, yielding a result of <span class="math inline">\(p-value&lt;0.05\)</span>, meaning that <u><strong>there is enough evidence to reject the null hypothesis (<span class="math inline">\(H_{0}\)</span>) that the data is normally distributed.</u></strong></p>
+<p>Although not meeting the normality assumption may introduce bias in the results, for the purpose of learning, we will proceed with examining the 4<sup>th</sup> assumption of ANOVA, which is the Equality of Variances (Homogeneity).</p>
+</div>
+<div id="equality-of-variances-homogeneity-1" class="section level4">
+<h4>Equality of Variances (Homogeneity)</h4>
+<p>According to this assumption, the variances of the groups in the ANOVA test are supposed to be equal. To test that, we again have three different options;</p>
+<ol style="list-style-type: lower-roman">
+<li>visually - via Histogram &amp; Dot Plot</li>
+<li>statistically - via Levene’s Test</li>
+<li>both</li>
+</ol>
+<p>Now, as it has been done previously, let’s go over with these 3 options in R.</p>
+<div class="panelset">
+<div class="panel">
+<p><span class="panel-name">Histogram</span></p>
+<pre class="r codeBackground"><code>full_data_1990_2020$economic_inequality &lt;- factor(full_data_1990_2020$economic_inequality, 
+                                                  levels = c(&quot;High Inequality&quot;, &quot;Medium Inequality&quot;, &quot;Low Inequality&quot;))
+
+ggplot(full_data_1990_2020, aes(x = count, fill = economic_inequality)) +
+  geom_histogram(position = &quot;identity&quot;, alpha = 0.6) +
+  labs(x = &quot;Value&quot;, y = &quot;Frequency&quot;) +
+  ggtitle(&quot;Histograms of Values by Inequality Status&quot;) +
+  facet_wrap(~ economic_inequality, nrow = 1) +
+  theme(legend.position = &quot;none&quot;)</code></pre>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/hist_homogeneity-1.png" width="672" /></p>
+</div>
+<div class="panel">
+<p><span class="panel-name">Dot Plot</span></p>
+<pre class="r"><code>ggplot(full_data_1990_2020, aes(x = economic_inequality, y = count)) +
+  geom_point()</code></pre>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/dotplot-1.png" width="672" /></p>
+</div>
+<div class="panel">
+<p><span class="panel-name">Levene’s Test</span></p>
+<pre class="r"><code>library(car)
+
+leveneTest(count ~ economic_inequality, data = full_data_1990_2020)</code></pre>
+<pre class="codeBackground"><code>## Levene&#39;s Test for Homogeneity of Variance (center = median)
+##        Df F value      Pr(&gt;F)    
+## group   2  12.592 0.000005372 ***
+##       330                        
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</code></pre>
+</div>
+</div>
+<p>Beginning with the histogram, it is evident that the variances within each group are high due to the right-skewed distribution of the number of terror events. Upon examining the dot plot, it becomes apparent that the variances within each group also exhibit a considerable variation. To statistically test this using Levene’s test in the third panel, the resulting <span class="math inline">\(p-value\)</span> is found to be lower than 0.05, indicating <u><strong>sufficient evidence to reject the null hypothesis (<span class="math inline">\(H_{0}\)</span>) that the variances are equal across groups.</u></strong></p>
+<p>To wrap up, in this tutorials, we go over the basics of Analysis of Variance (ANOVA) test in R along with covering its main assumptions. I hope that this was helpful and for further reference, you can refer to the following tutorials, which provide detailed explanations of the concepts discussed in this blog post:</p>
+<ul>
+<li><a href="https://statsandr.com/blog/anova-in-r/">ANOVA in R</a></li>
+<li><a href="https://www.statmethods.net/stats/anova.html">ANOVA</a></li>
+</ul>
+</div>
+</div>
+<div class="footnotes footnotes-end-of-document">
+<hr />
+<ol>
+<li id="fn1"><p>Note that I have substituted one from the year columns across World Bank Indicators since, for example, the GDP per Capita for a given country in the year of 2020 is actually the GDP per Capita for the previous year.<a href="#fnref1" class="footnote-back">↩︎</a></p></li>
+<li id="fn2"><p>Note that the I took the Gini index along with the <code>SI.DST.10TH.10</code> variable just for fun. Essentially, these two variables will do the same thing of measuring the impact of economic inequality on the occurrence of terror events. Therefore, I will not include both of them in the same regression model, but as can be seen later on, they can be used as substitute for each other.<a href="#fnref2" class="footnote-back">↩︎</a></p></li>
+<li id="fn3"><p>As a rule of thumb, t-tests are employed for comparing two groups, whereas ANOVA is suitable for comparing three or more groups as in this case (High/Medium/Low income inequality.<a href="#fnref3" class="footnote-back">↩︎</a></p></li>
+</ol>
+</div>
