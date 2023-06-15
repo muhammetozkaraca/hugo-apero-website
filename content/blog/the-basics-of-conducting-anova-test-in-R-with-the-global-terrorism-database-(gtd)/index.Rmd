@@ -4,7 +4,7 @@ subtitle: ""
 author: Muhammet Ozkaraca
 draft: false
 layout: single
-summary: "In this post, I will conduct one-way & two-way ANOVA in R along with its main premises and post-hoc tests to cover the basics." 
+summary: "In this post, I will conduct an ANOVA in R along with covering its main premises." 
 date: "2023-06-14"
 output:
   blogdown::html_page:
