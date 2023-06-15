@@ -1,5 +1,5 @@
 ---
-title: "The Basics of Conducting ANOVA Test in R with the Global Terrorism Database (GTD)"
+title: "The Basics of Conducting an ANOVA Test in R Using the Global Terrorism Database (GTD)"
 subtitle: ""
 author: Muhammet Ozkaraca
 draft: false
