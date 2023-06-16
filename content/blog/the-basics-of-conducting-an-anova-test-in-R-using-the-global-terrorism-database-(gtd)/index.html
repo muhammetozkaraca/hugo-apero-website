@@ -137,7 +137,12 @@ Hypothesis (<span class="math inline">\(H_{0}\)</span>) and therefore this crite
 <strong>If Equality of Variances is not met, Welch ANOVA test should be used</strong>
 </div>
 <p>To sum up, the following figure might help which test to be used based on the specific features of the data.</p>
-<p><img src="assumptions_summary.png" width="788" /></p>
+<div class="figure">
+<img src="assumptions_summary.png" alt="summary_table" width="100%" />
+<p class="caption">
+(#fig:summary_image)summary_table
+</p>
+</div>
 </div>
 </div>
 <div id="conducting-anova-test-in-r" class="section level1">
@@ -248,7 +253,7 @@ leveneTest(count ~ economic_inequality, data = full_data_1990_2020)</code></pre>
 </div>
 <div id="conclusion" class="section level1">
 <h1>Conclusion</h1>
-<p>To wrap up, in this tutorial, we have covered the basics of the Analysis of Variance (ANOVA) test in R. We have mentioned its main assumptions and conducted a similar analysis using real-world data. <span style="color:red; font-weight: bold;">The results of the ANOVA test indicate a statistically significant difference across countries with varying levels of economic inequality regarding the occurrence of terror events. However, the 4<sup>th</sup> assumption of ANOVA, which is the Equality of Variances (Homogeneity), is violated. Therefore, we cannot consider our results reliable as the ANOVA test was not the appropriate choice for this analysis due to this violation.</span> Referring back to the previous table mentioned earlier, <em>it is recommended to conduct the Welch ANOVA test to determine whether different levels of economic inequality are associated with the number of terror events, thus providing more reliable conclusions.</em></p>
+<p>To wrap up, in this tutorial, we have covered the basics of the Analysis of Variance (ANOVA) test in R. We have mentioned its main assumptions and conducted a similar analysis using real-world data. <span style="color:red; font-weight: bold;">The results of the ANOVA test indicate a statistically significant difference across countries with varying levels of economic inequality regarding the occurrence of terror events. However, the 4<sup>th</sup> assumption of ANOVA, which is the Equality of Variances (Homogeneity), is violated. Therefore, we cannot consider our results reliable as the ANOVA test was not the appropriate choice for this analysis due to this violation.</span> Referring back to the previous summary table mentioned earlier, <em>it is recommended to conduct the Welch ANOVA test to determine whether different levels of economic inequality are associated with the number of terror events, thus providing more reliable conclusions.</em></p>
 <p>I hope that this tutorial was helpful and for further references, you can refer to the following tutorials, which provide detailed explanations of the concepts discussed in this blog post:</p>
 <ul>
 <li><a href="https://statsandr.com/blog/anova-in-r/">ANOVA in R</a></li>
