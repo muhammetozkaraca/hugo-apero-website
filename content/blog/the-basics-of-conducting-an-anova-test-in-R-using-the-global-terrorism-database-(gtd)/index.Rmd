@@ -88,7 +88,7 @@ ANOVA tests require that <u>the observations within each group are independent o
 
 ## Normality
 
-ANOVA tests requires the distribution of the residuals (the differences between the observed values and the predicted values) to be normal. In other words, the residuals should be normally distributed around zero and <u>*as a rule of thumb, for large sample sizes, normality is assumed to be satisfied*</u>. In this regard, there are three ways to check whether this assumption is met. 
+ANOVA tests require the distribution of the residuals (the differences between the observed values and the predicted values) to be normal. In other words, the residuals should be normally distributed around zero and <u>*as a rule of thumb, for large sample sizes, normality is assumed to be satisfied*</u> ^[Since Shapiro-Wilk test, and generally formal normality tests, is very sensitive even to small deviations as the sample size increases, a tendency exists to assume normality when the sample size is large. However, there are still controversies on that subject. For further reference, you can refer to [this](https://stats.stackexchange.com/questions/2492/is-normality-testing-essentially-useless) and [that.](https://stats.stackexchange.com/questions/52091/normality-assumption-and-sample-size)]. In this regard, there are three ways to check whether this assumption is met. 
 
 <div class="sidenote">**If normality is not met, the non-parametric test, Kruskal Wallis, should be used instead of ANOVA** to see at least one group is statistically different from others.</div>
 
@@ -143,7 +143,7 @@ summary(anova_model)
 :::
 :::::
 
-From the results, it can be seen that $p-value<0.05$, meaning that **<u>there is enough evidence to reject the Null Hypothesis ($H_{0}$) that there is no difference among groups (High/Medium/Low Economic Ineqaulity) with regards to the occurence of terror attacks</u>**. In other words, we can claim that *there is statistically significant evidence that at least one group has a difference in terms of the number of terror attacks they exposed to.*
+From the results, it can be seen that  $p-value<0.05$, meaning that **<u>there is enough evidence to reject the Null Hypothesis ($H_{0}$) that there is no difference among groups (High/Medium/Low Economic Ineqaulity) with regards to the occurence of terror attacks</u>**. In other words, we can claim that *there is statistically significant evidence that at least one group has a difference in terms of the number of terror attacks they exposed to.*
 
 Now, let's quickly go over the main assumptions and see whether the data we have to conduct the ANOVA meet them or not.
 
@@ -163,7 +163,7 @@ i) visually - Histogram & QQ Plot
 ii) statistically - via Shapiro Test
 iii) both
 
-Now, let go over them in the following panel. 
+Now, let's go over them in the following panel. 
 
 
 ::::: {.panelset}
@@ -194,10 +194,9 @@ shapiro.test(full_data_1990_2020$count)
 :::
 :::::
 
+From the initial two panels, both the histogram, showing the distribution of the number of terror events annually and the quantile-quantile (QQ) plot, showcasing the distribution of residuals, *it seems that our data does not exhibit a perfect normal distribution*. This observation is further confirmed by conducting the Shapiro test in the third panel, yielding a result of $p-value<0.05$, meaning that *there is enough evidence to reject the null hypothesis ($H_{0}$) that the data is normally distributed.* However, **<u>recalling the previous discussion mentioned earlier on the normality assumption, as the sample size increases, there is a tendency to assume normality, normality will be assumed at this point.</u>**
 
-From the initial two panels, *it is evident that our data does not exhibit a normal distribution*. Both the histogram and quantile-quantile (QQ) plot, which showcase the distribution of residuals, deviate from a normal distribution. This observation is further confirmed by conducting the Shapiro test in the third panel, yielding a result of $p-value<0.05$, meaning that <u>**there is enough evidence to reject the null hypothesis ($H_{0}$) that the data is normally distributed.</u>**
-
-Although not meeting the normality assumption may introduce bias in the results, for the purpose of learning, we will proceed with examining the 4^th^ assumption of ANOVA, which is the Equality of Variances (Homogeneity).
+Now, we will proceed with examining the 4^th^ assumption of ANOVA, which is the Equality of Variances (Homogeneity).
 
 ####  Equality of Variances (Homogeneity)
 
@@ -252,7 +251,12 @@ leveneTest(count ~ economic_inequality, data = full_data_1990_2020)
 
 Beginning with the histogram, it is evident that the variances within each group are high due to the right-skewed distribution of the number of terror events. Upon examining the dot plot, it becomes apparent that the variances within each group also exhibit a considerable variation. To statistically test this using Levene's test in the third panel, the resulting $p-value$  is found to be lower than 0.05, indicating  <u>**sufficient evidence to reject the null hypothesis ($H_{0}$) that the variances are equal across groups.</u>** 
 
-To wrap up, in this tutorial, we covered the basics of Analysis of Variance (ANOVA) test in R along with mentioning its main assumptions. I hope that this was helpful and for further reference, you can refer to the following tutorials, which provide detailed explanations of the concepts discussed in this blog post:
+# Conclusion
+
+To wrap up, in this tutorial, we have covered the basics of the Analysis of Variance (ANOVA) test in R. We have mentioned its main assumptions and conducted a similar analysis using real-world data. <span style="color:red; font-weight: bold;">The results of the ANOVA test indicate a statistically significant difference across countries with varying levels of economic inequality regarding the occurrence of terror events. However, the 4^th^ assumption of ANOVA, which is the Equality of Variances (Homogeneity), is violated. Therefore, we cannot consider our results reliable as the ANOVA test was not the appropriate choice for this analysis due to this violation.</span> Referring back to the previous table mentioned earlier, *it is recommended to conduct the Welch ANOVA test to determine whether different levels of economic inequality are associated with the number of terror events, thus providing more reliable conclusions.*
+
+
+I hope that this tutorial was helpful and for further references, you can refer to the following tutorials, which provide detailed explanations of the concepts discussed in this blog post:
 
 - [ANOVA in R](https://statsandr.com/blog/anova-in-r/)
 - [ANOVA](https://www.statmethods.net/stats/anova.html)

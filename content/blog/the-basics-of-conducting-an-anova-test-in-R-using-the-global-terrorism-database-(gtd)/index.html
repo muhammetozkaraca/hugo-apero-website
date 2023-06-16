@@ -27,6 +27,7 @@ output:
 <li><a href="#equality-of-variances-homogeneity" id="toc-equality-of-variances-homogeneity">Equality of Variances (Homogeneity)</a></li>
 </ul></li>
 <li><a href="#conducting-anova-test-in-r" id="toc-conducting-anova-test-in-r">Conducting ANOVA test in R</a></li>
+<li><a href="#conclusion" id="toc-conclusion">Conclusion</a></li>
 </ul>
 </div>
 
@@ -102,7 +103,7 @@ full_data_1990_2020 &lt;- full_data_1990_2020 %&gt;%
 </div>
 <div id="normality" class="section level2">
 <h2>Normality</h2>
-<p>ANOVA tests requires the distribution of the residuals (the differences between the observed values and the predicted values) to be normal. In other words, the residuals should be normally distributed around zero and <u><em>as a rule of thumb, for large sample sizes, normality is assumed to be satisfied</em></u>. In this regard, there are three ways to check whether this assumption is met.</p>
+<p>ANOVA tests require the distribution of the residuals (the differences between the observed values and the predicted values) to be normal. In other words, the residuals should be normally distributed around zero and <u><em>as a rule of thumb, for large sample sizes, normality is assumed to be satisfied</em></u> <a href="#fn4" class="footnote-ref" id="fnref4"><sup>4</sup></a>. In this regard, there are three ways to check whether this assumption is met.</p>
 <div class="sidenote">
 <strong>If normality is not met, the non-parametric test, Kruskal Wallis, should be used instead of ANOVA</strong> to see at least one group is statistically different from others.
 </div>
@@ -174,7 +175,7 @@ Hypothesis (<span class="math inline">\(H_{0}\)</span>) and therefore this crite
 <li>statistically - via Shapiro Test</li>
 <li>both</li>
 </ol>
-<p>Now, let go over them in the following panel.</p>
+<p>Now, let’s go over them in the following panel.</p>
 <div class="panelset">
 <div class="panel">
 <p><span class="panel-name">Histogram</span></p>
@@ -197,8 +198,8 @@ qqline(resid(anova_model))</code></pre>
 ## W = 0.31233, p-value &lt; 0.00000000000000022</code></pre>
 </div>
 </div>
-<p>From the initial two panels, <em>it is evident that our data does not exhibit a normal distribution</em>. Both the histogram and quantile-quantile (QQ) plot, which showcase the distribution of residuals, deviate from a normal distribution. This observation is further confirmed by conducting the Shapiro test in the third panel, yielding a result of <span class="math inline">\(p-value&lt;0.05\)</span>, meaning that <u><strong>there is enough evidence to reject the null hypothesis (<span class="math inline">\(H_{0}\)</span>) that the data is normally distributed.</u></strong></p>
-<p>Although not meeting the normality assumption may introduce bias in the results, for the purpose of learning, we will proceed with examining the 4<sup>th</sup> assumption of ANOVA, which is the Equality of Variances (Homogeneity).</p>
+<p>From the initial two panels, both the histogram, showing the distribution of the number of terror events annually and the quantile-quantile (QQ) plot, showcasing the distribution of residuals, <em>it seems that our data does not exhibit a perfect normal distribution</em>. This observation is further confirmed by conducting the Shapiro test in the third panel, yielding a result of <span class="math inline">\(p-value&lt;0.05\)</span>, meaning that <em>there is enough evidence to reject the null hypothesis (<span class="math inline">\(H_{0}\)</span>) that the data is normally distributed.</em> However, <strong><u>recalling the previous discussion mentioned earlier on the normality assumption, as the sample size increases, there is a tendency to assume normality, normality will be assumed at this point.</u></strong></p>
+<p>Now, we will proceed with examining the 4<sup>th</sup> assumption of ANOVA, which is the Equality of Variances (Homogeneity).</p>
 </div>
 <div id="equality-of-variances-homogeneity-1" class="section level4">
 <h4>Equality of Variances (Homogeneity)</h4>
@@ -243,12 +244,16 @@ leveneTest(count ~ economic_inequality, data = full_data_1990_2020)</code></pre>
 </div>
 </div>
 <p>Beginning with the histogram, it is evident that the variances within each group are high due to the right-skewed distribution of the number of terror events. Upon examining the dot plot, it becomes apparent that the variances within each group also exhibit a considerable variation. To statistically test this using Levene’s test in the third panel, the resulting <span class="math inline">\(p-value\)</span> is found to be lower than 0.05, indicating <u><strong>sufficient evidence to reject the null hypothesis (<span class="math inline">\(H_{0}\)</span>) that the variances are equal across groups.</u></strong></p>
-<p>To wrap up, in this tutorial, we covered the basics of Analysis of Variance (ANOVA) test in R along with mentioning its main assumptions. I hope that this was helpful and for further reference, you can refer to the following tutorials, which provide detailed explanations of the concepts discussed in this blog post:</p>
+</div>
+</div>
+<div id="conclusion" class="section level1">
+<h1>Conclusion</h1>
+<p>To wrap up, in this tutorial, we have covered the basics of the Analysis of Variance (ANOVA) test in R. We have mentioned its main assumptions and conducted a similar analysis using real-world data. <span style="color:red; font-weight: bold;">The results of the ANOVA test indicate a statistically significant difference across countries with varying levels of economic inequality regarding the occurrence of terror events. However, the 4<sup>th</sup> assumption of ANOVA, which is the Equality of Variances (Homogeneity), is violated. Therefore, we cannot consider our results reliable as the ANOVA test was not the appropriate choice for this analysis due to this violation.</span> Referring back to the previous table mentioned earlier, <em>it is recommended to conduct the Welch ANOVA test to determine whether different levels of economic inequality are associated with the number of terror events, thus providing more reliable conclusions.</em></p>
+<p>I hope that this tutorial was helpful and for further references, you can refer to the following tutorials, which provide detailed explanations of the concepts discussed in this blog post:</p>
 <ul>
 <li><a href="https://statsandr.com/blog/anova-in-r/">ANOVA in R</a></li>
 <li><a href="https://www.statmethods.net/stats/anova.html">ANOVA</a></li>
 </ul>
-</div>
 </div>
 <div class="footnotes footnotes-end-of-document">
 <hr />
@@ -256,5 +261,6 @@ leveneTest(count ~ economic_inequality, data = full_data_1990_2020)</code></pre>
 <li id="fn1"><p>Note that I have substituted one from the year columns across World Bank Indicators since, for example, the GDP per Capita for a given country in the year of 2020 is actually the GDP per Capita for the previous year.<a href="#fnref1" class="footnote-back">↩︎</a></p></li>
 <li id="fn2"><p>Note that the I took the Gini index along with the <code>SI.DST.10TH.10</code> variable just for fun. Essentially, these two variables will do the same thing of measuring the impact of economic inequality on the occurrence of terror events. Therefore, I will not include both of them in the same regression model, but as can be seen later on, they can be used as substitute for each other.<a href="#fnref2" class="footnote-back">↩︎</a></p></li>
 <li id="fn3"><p>As a rule of thumb, t-tests are employed for comparing two groups, whereas ANOVA is suitable for comparing three or more groups as in this case (High/Medium/Low income inequality.<a href="#fnref3" class="footnote-back">↩︎</a></p></li>
+<li id="fn4"><p>Since Shapiro-Wilk test, and generally formal normality tests, is very sensitive even to small deviations as the sample size increases, a tendency exists to assume normality when the sample size is large. However, there are still controversies on that subject. For further reference, you can refer to <a href="https://stats.stackexchange.com/questions/2492/is-normality-testing-essentially-useless">this</a> and <a href="https://stats.stackexchange.com/questions/52091/normality-assumption-and-sample-size">that.</a><a href="#fnref4" class="footnote-back">↩︎</a></p></li>
 </ol>
 </div>
